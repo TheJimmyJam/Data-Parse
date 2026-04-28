@@ -1,15 +1,17 @@
-import { getDeployStore } from '@netlify/blobs';
+/* eslint-disable @typescript-eslint/no-var-requires */
+const { getDeployStore } = require('@netlify/blobs');
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
   };
+
   if (event.httpMethod === 'OPTIONS') return { statusCode: 200, headers, body: '' };
 
-  const jobId = event.queryStringParameters?.jobId;
+  const jobId = event.queryStringParameters && event.queryStringParameters.jobId;
   if (!jobId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing jobId' }) };
 
   try {

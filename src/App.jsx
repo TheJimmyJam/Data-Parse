@@ -581,16 +581,14 @@ export default function App() {
     setError('');
 
     // Start all jobs in parallel
-    // Small files (< 1.5MB base64 ≈ ~1MB raw) → sync function, fast response
-    // Large files → background function with polling (no timeout ceiling)
-    const SYNC_THRESHOLD = 1.5 * 1024 * 1024;
-
+    // PDFs → background function (no timeout ceiling — Claude can take 60+ seconds on multi-page PDFs)
+    // All other formats (CSV, TXT, JSON, XLSX) → sync function (fast, always under 26s)
     const startJob = async (job, file) => {
       try {
         const fileContent = await fileToBase64(file);
+        const isPDF = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
 
-        if (fileContent.length >= SYNC_THRESHOLD) {
-          // Large file → background function
+        if (isPDF) {
           const startRes = await fetch('/.netlify/functions/parse-document-background', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -599,10 +597,10 @@ export default function App() {
           if (startRes.status === 202) return await pollJob(job.jobId);
           const errText = await startRes.text();
           let errJson; try { errJson = JSON.parse(errText); } catch { errJson = {}; }
-          throw new Error(errJson.error || `Failed to queue document (status ${startRes.status})`);
+          throw new Error(errJson.error || `Failed to queue PDF (status ${startRes.status})`);
         }
 
-        // Small file → sync function (fast, reliable)
+        // Non-PDF → sync function (fast, reliable)
         const syncRes = await fetch('/.netlify/functions/parse-document', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -611,7 +609,7 @@ export default function App() {
         const text = await syncRes.text();
         let json;
         try { json = JSON.parse(text); } catch {
-          throw new Error(`Server error (${syncRes.status}) — document may be too large. Try a shorter file.`);
+          throw new Error(`Server error (${syncRes.status}) — please try again.`);
         }
         if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
         return { result: json, meta: json.meta };

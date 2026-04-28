@@ -1,12 +1,13 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { getDeployStore } from '@netlify/blobs';
+/* eslint-disable @typescript-eslint/no-var-requires */
+const Anthropic = require('@anthropic-ai/sdk');
+const { getDeployStore } = require('@netlify/blobs');
 
 async function setJob(jobId, payload) {
   const store = getDeployStore('parse-jobs');
   await store.setJSON(jobId, payload);
 }
 
-export const handler = async (event) => {
+exports.handler = async (event) => {
   let jobId;
   try {
     const body = JSON.parse(event.body || '{}');
@@ -21,9 +22,28 @@ export const handler = async (event) => {
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    const PROMPT = `Analyze this document. Return ONLY valid JSON, no markdown:
-{"documentType":"","documentCategory":"Legal|Financial|Medical|Insurance|Government|Historical|Scientific|Corporate|Technical|Personal|Academic|Other","summary":"2-4 sentence summary","confidence":"High|Medium|Low","parties":[{"name":"","role":"","type":"","contact":null,"notes":null}],"keyDates":[{"label":"","date":""}],"keyAmounts":[{"label":"","amount":"","currency":null}],"sections":[{"title":"","summary":"","keyPoints":[""]}],"obligations":[{"party":"","obligation":"","deadline":null}],"rights":[{"party":"","right":""}],"restrictions":[""],"definitions":[{"term":"","definition":""}],"flags":[""],"tags":[""],"customFields":{}}
-Document: ${fileName}`;
+    const PROMPT = `You are Jessica, an expert AI document analyst. Analyze this document and return ONLY a valid JSON object — no markdown fences, no explanation text, just raw JSON.
+
+Return this structure:
+{
+  "documentType": "Specific type (e.g. Constitutional Amendment, Invoice, Insurance Policy, etc.)",
+  "documentCategory": "Legal | Financial | Medical | Insurance | Government | Historical | Scientific | Corporate | Technical | Personal | Academic | Other",
+  "summary": "2-4 sentence plain English summary of what this document is and why it matters",
+  "confidence": "High | Medium | Low",
+  "parties": [{ "name": "", "role": "", "type": "Individual|Organization|Government|Corporation|Institution|Other", "contact": null, "notes": null }],
+  "keyDates": [{ "label": "", "date": "" }],
+  "keyAmounts": [{ "label": "", "amount": "", "currency": null }],
+  "sections": [{ "title": "", "summary": "", "keyPoints": [""] }],
+  "obligations": [{ "party": "", "obligation": "", "deadline": null }],
+  "rights": [{ "party": "", "right": "" }],
+  "restrictions": [""],
+  "definitions": [{ "term": "", "definition": "" }],
+  "flags": [""],
+  "tags": [""],
+  "customFields": {}
+}
+
+Document filename: ${fileName}`;
 
     let messageContent;
     if (isPDF) {
@@ -34,22 +54,31 @@ Document: ${fileName}`;
     } else {
       const buffer = Buffer.from(fileContent, 'base64');
       const textContent = buffer.toString('utf-8').substring(0, 60000);
-      messageContent = [{ type: 'text', text: `${PROMPT}\n\nContent:\n${textContent}` }];
+      messageContent = [{ type: 'text', text: `${PROMPT}\n\nDocument content:\n${textContent}` }];
     }
 
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 8192,
-      system: 'You are Jessica, an expert AI document analyst. Respond with ONLY valid JSON — no markdown, no explanation.',
+      system: 'You are Jessica, an expert AI document analyst. Always respond with ONLY valid JSON. No markdown fences, no explanation text, just the raw JSON object.',
       messages: [{ role: 'user', content: messageContent }],
     });
 
     const raw = message.content[0].text.trim();
     let parsedData;
     try {
-      parsedData = JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+      const firstBrace = raw.indexOf('{');
+      const lastBrace = raw.lastIndexOf('}');
+      parsedData = JSON.parse(raw.substring(firstBrace, lastBrace + 1));
     } catch (e) {
-      parsedData = { documentType: 'Unknown', documentCategory: 'Other', summary: 'Parse error.', confidence: 'Low', flags: [`Parse error: ${e.message}`], parties: [], keyDates: [], keyAmounts: [], sections: [], obligations: [], rights: [], restrictions: [], definitions: [], tags: [], customFields: {} };
+      parsedData = {
+        documentType: 'Unknown', documentCategory: 'Other',
+        summary: 'Could not parse response. The document may be too complex.',
+        confidence: 'Low',
+        flags: [`Parse error: ${e.message}`],
+        parties: [], keyDates: [], keyAmounts: [], sections: [], obligations: [],
+        rights: [], restrictions: [], definitions: [], tags: [], customFields: {}
+      };
     }
 
     await setJob(jobId, {
@@ -61,7 +90,7 @@ Document: ${fileName}`;
   } catch (err) {
     console.error('background error:', err);
     if (jobId) {
-      try { await setJob(jobId, { status: 'error', error: err.message }); } catch {}
+      try { await setJob(jobId, { status: 'error', error: err.message }); } catch (_) {}
     }
   }
 };
