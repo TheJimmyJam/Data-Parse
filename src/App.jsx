@@ -603,7 +603,15 @@ export default function App() {
             body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
           });
           const text = await syncRes.text();
-          const json = JSON.parse(text);
+          let json;
+          try {
+            json = JSON.parse(text);
+          } catch {
+            if (syncRes.status === 502 || syncRes.status === 504 || syncRes.status === 524) {
+              throw new Error('Request timed out. The document may be too large for direct processing — make sure the Supabase parse_jobs table is created so background processing works for large files.');
+            }
+            throw new Error(`Server returned an unexpected response (${syncRes.status}). The document may be too large — check that your Supabase parse_jobs table exists.`);
+          }
           if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
           return { result: json, meta: json.meta };
         }
