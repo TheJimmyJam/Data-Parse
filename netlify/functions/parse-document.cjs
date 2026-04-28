@@ -1,13 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const Anthropic = require('@anthropic-ai/sdk');
 
-// ─── PDF Parser ───────────────────────────────────────────────────────────────
-async function extractPDF(buffer) {
-  const pdfParse = require('pdf-parse/lib/pdf-parse.js');
-  const data = await pdfParse(buffer);
-  return data.text || '';
-}
-
 // ─── Excel / XLSX Parser ──────────────────────────────────────────────────────
 function extractExcel(buffer) {
   const XLSX = require('xlsx');
@@ -45,30 +38,6 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing fileContent or fileName' }) };
     }
 
-    const buffer = Buffer.from(fileContent, 'base64');
-    const lowerName = fileName.toLowerCase();
-    let textContent = '';
-
-    // ── Extract text based on file type ──
-    if (lowerName.endsWith('.pdf') || fileType === 'application/pdf') {
-      textContent = await extractPDF(buffer);
-    } else if (
-      lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls') || lowerName.endsWith('.xlsm') ||
-      fileType.includes('spreadsheet') || fileType.includes('excel')
-    ) {
-      textContent = extractExcel(buffer);
-    } else {
-      textContent = buffer.toString('utf-8');
-    }
-
-    if (!textContent || textContent.trim().length === 0) {
-      return {
-        statusCode: 422,
-        headers,
-        body: JSON.stringify({ error: 'Could not extract any text from this file. It may be an image-only scan or encrypted.' }),
-      };
-    }
-
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return { statusCode: 500, headers, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY is not configured.' }) };
@@ -95,7 +64,7 @@ Return ONLY a JSON object with this structure:
   "parties": [
     {
       "name": "Party name",
-      "role": "Their specific role in this document (e.g. Grantor, Plaintiff, Employer, Author, Insured, Congress, etc.)",
+      "role": "Their specific role in this document",
       "type": "Individual | Organization | Government | Corporation | Institution | Other",
       "contact": "Contact info or address if present, otherwise null",
       "notes": "Any relevant detail about this party, or null"
@@ -114,10 +83,7 @@ Return ONLY a JSON object with this structure:
     {
       "title": "Section name, article title, or topic heading",
       "summary": "1-2 sentence summary of what this section covers",
-      "keyPoints": [
-        "Concise bullet-point key takeaway",
-        "Another key takeaway"
-      ]
+      "keyPoints": ["Concise key takeaway", "Another key takeaway"]
     }
   ],
 
@@ -137,7 +103,7 @@ Return ONLY a JSON object with this structure:
   ],
 
   "restrictions": [
-    "Plain-language description of each restriction, prohibition, exclusion, or limitation found in the document"
+    "Plain-language description of each restriction, prohibition, exclusion, or limitation"
   ],
 
   "definitions": [
@@ -148,29 +114,74 @@ Return ONLY a JSON object with this structure:
     "Any item that stands out — unusual clauses, missing information, contradictions, expiration concerns, notable risks, historical significance, or anything a careful reader should pay attention to"
   ],
 
-  "tags": ["keyword1", "keyword2", "relevant topic tags for this document"],
+  "tags": ["keyword1", "keyword2", "relevant topic tags"],
 
   "customFields": {
-    "Use this object for any data that is important and specific to this document type but doesn't fit the above schema. Examples: for insurance add policyNumber/coverageLimits, for a court ruling add caseNumber/jurisdiction/verdict, for a medical record add diagnoses/medications, for a scientific paper add methodology/findings/citations, etc."
+    "note": "Use this for data important to this document type but not covered above (e.g. policyNumber, caseNumber, diagnoses, methodology, etc.)"
   }
 }
 
-Document filename: ${fileName}
+Document filename: ${fileName}`;
 
-Document content:
-${textContent.substring(0, 60000)}`;
+    const lowerName = fileName.toLowerCase();
+    const isPDF = lowerName.endsWith('.pdf') || fileType === 'application/pdf';
+    const isExcel = lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls') || lowerName.endsWith('.xlsm') ||
+      (fileType && (fileType.includes('spreadsheet') || fileType.includes('excel')));
+
+    let messageContent;
+
+    if (isPDF) {
+      // Pass PDF directly to Claude — no extraction needed, handles image-only PDFs too
+      messageContent = [
+        {
+          type: 'document',
+          source: {
+            type: 'base64',
+            media_type: 'application/pdf',
+            data: fileContent,
+          },
+        },
+        {
+          type: 'text',
+          text: USER_PROMPT,
+        },
+      ];
+    } else {
+      // Extract text from Excel, CSV, TXT, JSON, etc.
+      const buffer = Buffer.from(fileContent, 'base64');
+      let textContent = '';
+
+      if (isExcel) {
+        textContent = extractExcel(buffer);
+      } else {
+        textContent = buffer.toString('utf-8');
+      }
+
+      if (!textContent || textContent.trim().length === 0) {
+        return {
+          statusCode: 422,
+          headers,
+          body: JSON.stringify({ error: 'Could not extract any text from this file. It may be empty or in an unsupported format.' }),
+        };
+      }
+
+      messageContent = [
+        {
+          type: 'text',
+          text: `${USER_PROMPT}\n\nDocument content:\n${textContent.substring(0, 60000)}`,
+        },
+      ];
+    }
 
     const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: USER_PROMPT }],
+      messages: [{ role: 'user', content: messageContent }],
     });
 
     const rawResponse = message.content[0].text.trim();
 
-    // Robustly extract JSON: find the outermost { ... } regardless of any
-    // surrounding text, markdown fences, or preamble Claude may have added.
     let parsedData;
     try {
       const firstBrace = rawResponse.indexOf('{');
@@ -180,7 +191,6 @@ ${textContent.substring(0, 60000)}`;
       }
       parsedData = JSON.parse(rawResponse.substring(firstBrace, lastBrace + 1));
     } catch (parseErr) {
-      // Graceful fallback: surface the raw text so the user gets something useful
       parsedData = {
         documentType: 'Unknown',
         documentCategory: 'Other',
@@ -201,8 +211,7 @@ ${textContent.substring(0, 60000)}`;
         meta: {
           fileName,
           fileType,
-          characterCount: textContent.length,
-          truncated: textContent.length > 60000,
+          method: isPDF ? 'native-pdf' : 'text-extraction',
         },
       }),
     };
