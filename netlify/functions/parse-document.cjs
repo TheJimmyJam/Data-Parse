@@ -175,7 +175,7 @@ Document filename: ${fileName}`;
 
     const message = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: messageContent }],
     });
@@ -194,9 +194,9 @@ Document filename: ${fileName}`;
       parsedData = {
         documentType: 'Unknown',
         documentCategory: 'Other',
-        summary: rawResponse.substring(0, 2000),
+        summary: 'Jessica\'s response was too long to parse completely. Try a shorter document, or the document may have parsed partially — check the raw JSON below.',
         confidence: 'Low',
-        flags: [`Jessica's response could not be parsed as JSON (${parseErr.message}) — partial output shown in summary`],
+        flags: [`Response truncated or malformed (${parseErr.message}). The document may be too large for a single pass.`],
         parties: [], keyDates: [], keyAmounts: [], sections: [], obligations: [],
         rights: [], restrictions: [], definitions: [], tags: [], customFields: {}
       };
