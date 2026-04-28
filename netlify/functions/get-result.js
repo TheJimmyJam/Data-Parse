@@ -1,4 +1,4 @@
-import { getStore } from '@netlify/blobs';
+import { getDeployStore } from '@netlify/blobs';
 
 export const handler = async (event) => {
   const headers = {
@@ -13,7 +13,7 @@ export const handler = async (event) => {
   if (!jobId) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing jobId' }) };
 
   try {
-    const store = getStore('parse-jobs');
+    const store = getDeployStore('parse-jobs');
     const data = await store.get(jobId, { type: 'json' });
     if (!data) return { statusCode: 200, headers, body: JSON.stringify({ status: 'pending' }) };
     return { statusCode: 200, headers, body: JSON.stringify(data) };

@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { getStore } from '@netlify/blobs';
+import { getDeployStore } from '@netlify/blobs';
 
 async function setJob(jobId, payload) {
-  const store = getStore('parse-jobs');
+  const store = getDeployStore('parse-jobs');
   await store.setJSON(jobId, payload);
 }
 
