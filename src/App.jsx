@@ -717,11 +717,12 @@ export default function App() {
         } else {
           const docType = outcome.result?.data?.documentType || null;
           const docCat = outcome.result?.data?.documentCategory || null;
+          const fromCache = outcome.meta?.fromCache || false;
           setJobs(prev => prev.map(j => j.id === job.id
-            ? { ...j, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat, fileHash: outcome.fileHash }
+            ? { ...j, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat, fileHash: outcome.fileHash, fromCache }
             : j
           ));
-          return { ...job, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat, fileHash: outcome.fileHash };
+          return { ...job, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat, fileHash: outcome.fileHash, fromCache };
         }
       })
     );
@@ -751,12 +752,13 @@ export default function App() {
 
     setBatchAnalysis(batchResult);
 
-    // Save to history
-    if (successfulJobs.length > 0) {
+    // Save to history — skip jobs that came from cache to avoid duplicates
+    const newJobs = successfulJobs.filter(j => !j.fromCache);
+    if (newJobs.length > 0) {
       await pushHistory({
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
-        jobs: successfulJobs.map(j => ({
+        jobs: newJobs.map(j => ({
           id: j.id,
           fileName: j.fileName,
           fileType: j.fileType,
