@@ -319,6 +319,133 @@ function ResultsTabs({ jobs, activeIdx, onSelect }) {
   );
 }
 
+// ─── Ask Jessica Chat ─────────────────────────────────────────────────────────
+function AskJessica({ documentData, fileName }) {
+  const [question, setQuestion] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [conversation, setConversation] = useState([]); // [{role, content}]
+  const [error, setError] = useState('');
+  const bottomRef = useRef(null);
+
+  const SUGGESTIONS = [
+    'What are the biggest red flags I should be concerned about?',
+    'What would be a reasonable counter-offer?',
+    'Explain this in plain English like I\'m not a lawyer.',
+    'What are my most important obligations here?',
+    'What rights do I have that I should push back on?',
+    'Is anything missing that should normally be in a document like this?',
+  ];
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conversation, loading]);
+
+  const send = async (q) => {
+    const trimmed = (q || question).trim();
+    if (!trimmed || loading) return;
+    setQuestion('');
+    setError('');
+    setLoading(true);
+
+    // Build history for API (exclude system context turns — just user/assistant pairs)
+    const historyForApi = conversation.map(m => ({ role: m.role, content: m.content }));
+
+    setConversation(prev => [...prev, { role: 'user', content: trimmed }]);
+
+    try {
+      const res = await fetch('/.netlify/functions/ask-jessica', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentData,
+          fileName,
+          question: trimmed,
+          conversationHistory: historyForApi,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Something went wrong.');
+      setConversation(prev => [...prev, { role: 'assistant', content: data.answer }]);
+    } catch (err) {
+      setError(err.message);
+      setConversation(prev => prev.slice(0, -1)); // remove optimistic user msg on failure
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  };
+
+  return (
+    <div className="ask-jessica">
+      <div className="ask-jessica-header">
+        <img src="/jessica.png" alt="Jessica" className="summary-avatar" />
+        <div>
+          <div className="ask-jessica-title">✦ Ask Jessica</div>
+          <div className="ask-jessica-sub">Follow-up questions about this document</div>
+        </div>
+      </div>
+
+      {conversation.length === 0 && (
+        <div className="ask-suggestions">
+          {SUGGESTIONS.map((s, i) => (
+            <button key={i} className="ask-suggestion-chip" onClick={() => send(s)}>{s}</button>
+          ))}
+        </div>
+      )}
+
+      {conversation.length > 0 && (
+        <div className="ask-messages">
+          {conversation.map((msg, i) => (
+            <div key={i} className={`ask-message ask-message-${msg.role}`}>
+              {msg.role === 'assistant' && (
+                <img src="/jessica.png" alt="Jessica" className="ask-avatar" />
+              )}
+              <div className="ask-bubble">
+                {msg.content.split('\n').map((line, j) => (
+                  line.trim() === '' ? <br key={j} /> : <p key={j}>{line}</p>
+                ))}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="ask-message ask-message-assistant">
+              <img src="/jessica.png" alt="Jessica" className="ask-avatar" />
+              <div className="ask-bubble ask-bubble-loading">
+                <span /><span /><span />
+              </div>
+            </div>
+          )}
+          {error && <div className="ask-error">⚠️ {error}</div>}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      <div className="ask-input-row">
+        <textarea
+          className="ask-input"
+          placeholder="Ask Jessica anything about this document…"
+          value={question}
+          onChange={e => setQuestion(e.target.value)}
+          onKeyDown={handleKey}
+          rows={2}
+          disabled={loading}
+        />
+        <button
+          className="ask-send-btn"
+          onClick={() => send()}
+          disabled={loading || !question.trim()}
+        >
+          {loading ? '…' : '↑'}
+        </button>
+      </div>
+      <div className="ask-hint">Press Enter to send · Shift+Enter for new line</div>
+    </div>
+  );
+}
+
 // ─── Results Panel ────────────────────────────────────────────────────────────
 function ResultsPanel({ result, meta }) {
   const { data } = result;
@@ -893,7 +1020,13 @@ export default function App() {
               />
 
               {activeJob?.result
-                ? <ResultsPanel result={activeJob.result} meta={activeJob.meta} />
+                ? <>
+                    <ResultsPanel result={activeJob.result} meta={activeJob.meta} />
+                    <AskJessica
+                      documentData={activeJob.result.data}
+                      fileName={activeJob.meta?.fileName || activeJob.fileName}
+                    />
+                  </>
                 : activeJob?.error
                 ? <div className="error-page"><p className="error-msg">Failed: {activeJob.error}</p></div>
                 : null}

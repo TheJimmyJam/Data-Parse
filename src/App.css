@@ -737,3 +737,198 @@ td.amount { font-weight: 700; color: var(--green); }
   .results-header { flex-direction: column; padding: 14px 16px; }
   .section { padding: 12px 14px; }
 }
+
+/* ─── Ask Jessica ──────────────────────────────────────────────────────────── */
+.ask-jessica {
+  background: #0f0e1a;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.ask-jessica-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ask-jessica-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #a5b4fc;
+  letter-spacing: 0.02em;
+}
+
+.ask-jessica-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* Suggestion chips shown before first message */
+.ask-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ask-suggestion-chip {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+  line-height: 1.4;
+}
+.ask-suggestion-chip:hover {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+/* Conversation messages */
+.ask-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ask-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ask-message-user {
+  flex-direction: row-reverse;
+}
+
+.ask-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ask-bubble {
+  max-width: 82%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #e2e8f0;
+}
+
+.ask-bubble p {
+  margin: 0 0 6px;
+}
+.ask-bubble p:last-child { margin-bottom: 0; }
+
+.ask-message-assistant .ask-bubble {
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-top-left-radius: 4px;
+}
+
+.ask-message-user .ask-bubble {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-top-right-radius: 4px;
+  color: #cbd5e1;
+}
+
+/* Typing dots loading bubble */
+.ask-bubble-loading {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 18px;
+}
+.ask-bubble-loading span {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6366f1;
+  animation: ask-dot-bounce 1.2s ease-in-out infinite;
+}
+.ask-bubble-loading span:nth-child(2) { animation-delay: 0.2s; }
+.ask-bubble-loading span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ask-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.ask-error {
+  font-size: 13px;
+  color: #f87171;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Input row */
+.ask-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.ask-input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 12px;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 10px 14px;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.ask-input:focus {
+  border-color: rgba(99, 102, 241, 0.6);
+}
+.ask-input::placeholder { color: #4b5563; }
+.ask-input:disabled { opacity: 0.5; }
+
+.ask-send-btn {
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, opacity 0.15s;
+  padding: 0;
+}
+.ask-send-btn:hover:not(:disabled) { background: #4f46e5; }
+.ask-send-btn:disabled { opacity: 0.4; cursor: default; }
+
+.ask-hint {
+  font-size: 11px;
+  color: #374151;
+  margin-top: 6px;
+  text-align: right;
+}
