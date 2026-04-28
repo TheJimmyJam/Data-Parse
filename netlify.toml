@@ -11,7 +11,7 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
 
 [functions]
-  node_bundler = "zisi"
+  node_bundler = "esbuild"
 
 [functions."parse-document"]
   timeout = 26
