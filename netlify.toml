@@ -12,3 +12,4 @@
 
 [functions]
   node_bundler = "zisi"
+  timeout = 26
