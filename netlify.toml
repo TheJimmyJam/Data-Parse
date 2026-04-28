@@ -12,3 +12,6 @@
 
 [functions]
   node_bundler = "zisi"
+
+[functions."parse-document"]
+  timeout = 26
