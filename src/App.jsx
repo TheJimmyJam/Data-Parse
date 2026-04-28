@@ -581,18 +581,42 @@ export default function App() {
     setError('');
 
     // Start all jobs in parallel
-    // PDFs → background function (no timeout ceiling — Claude can take 60+ seconds on multi-page PDFs)
-    // All other formats (CSV, TXT, JSON, XLSX) → sync function (fast, always under 26s)
+    // PDFs → background function (no timeout ceiling)
+    //   Large PDFs (>3MB base64) are uploaded to Supabase Storage first to avoid Netlify's 6MB body limit
+    //   Small PDFs are sent inline
+    // Non-PDFs → sync function (fast, always under 26s)
+    const INLINE_LIMIT = 3 * 1024 * 1024; // 3MB base64
+
     const startJob = async (job, file) => {
       try {
         const fileContent = await fileToBase64(file);
         const isPDF = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
 
         if (isPDF) {
+          let bgBody;
+
+          if (fileContent.length > INLINE_LIMIT) {
+            // Large PDF — upload to Supabase Storage first, pass path to background fn
+            const uploadRes = await fetch('/.netlify/functions/upload-pdf', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jobId: job.jobId, fileContent, fileName: file.name }),
+            });
+            if (!uploadRes.ok) {
+              const e = await uploadRes.json().catch(() => ({}));
+              throw new Error(e.error || `Upload failed (${uploadRes.status})`);
+            }
+            const { storagePath } = await uploadRes.json();
+            bgBody = { jobId: job.jobId, storagePath, fileName: file.name, fileType: file.type || '' };
+          } else {
+            // Small PDF — send inline
+            bgBody = { jobId: job.jobId, fileContent, fileName: file.name, fileType: file.type || '' };
+          }
+
           const startRes = await fetch('/.netlify/functions/parse-document-background', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jobId: job.jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
+            body: JSON.stringify(bgBody),
           });
           if (startRes.status === 202) return await pollJob(job.jobId);
           const errText = await startRes.text();
