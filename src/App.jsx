@@ -580,42 +580,26 @@ export default function App() {
     setStatus('loading');
     setError('');
 
-    // Start all jobs in parallel
+    // Start all jobs in parallel — always use background function (no timeout limits)
     const startJob = async (job, file) => {
       try {
         const fileContent = await fileToBase64(file);
 
-        // Files under 2MB base64 → background function (async, no timeout issues)
-        // Files over 2MB → sync function with extended timeout
-        const useBackground = fileContent.length < 2 * 1024 * 1024;
-
-        if (useBackground) {
-          const startRes = await fetch('/.netlify/functions/parse-document-background', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jobId: job.jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
-          });
-
-          if (startRes.status === 202) {
-            return await pollJob(job.jobId);
-          }
-        }
-
-        // Sync fallback (larger files or if background unavailable)
-        const syncRes = await fetch('/.netlify/functions/parse-document', {
+        const startRes = await fetch('/.netlify/functions/parse-document-background', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
+          body: JSON.stringify({ jobId: job.jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
         });
-        const text = await syncRes.text();
-        let json;
-        try {
-          json = JSON.parse(text);
-        } catch {
-          throw new Error(`Server error (${syncRes.status}) — the document may have taken too long to process. Try a smaller file.`);
+
+        if (startRes.status === 202) {
+          return await pollJob(job.jobId);
         }
-        if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
-        return { result: json, meta: json.meta };
+
+        // Background function failed to accept — surface the error
+        const errText = await startRes.text();
+        let errJson;
+        try { errJson = JSON.parse(errText); } catch { errJson = {}; }
+        throw new Error(errJson.error || `Failed to start processing (status ${startRes.status})`);
 
       } catch (err) {
         return { error: err.message };
