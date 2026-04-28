@@ -120,8 +120,12 @@ body {
 }
 .jessica-avatar.large { width: 80px; height: 80px; }
 .jessica-avatar.loading-avatar {
-  width: 90px; height: 90px;
-  box-shadow: 0 0 0 10px rgba(99,102,241,.08), 0 4px 20px rgba(99,102,241,.4);
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  box-shadow: 0 0 0 12px rgba(99,102,241,.08), 0 4px 24px rgba(99,102,241,.4);
+  border: 3px solid rgba(255,255,255,.6);
 }
 .summary-avatar {
   width: 52px; height: 52px; border-radius: 50%;
@@ -142,9 +146,10 @@ body {
 
 /* ─── Landing ──────────────────────────────────────────────────────────────── */
 .landing {
-  max-width: 580px;
+  max-width: 1000px;
   margin: 0 auto;
   animation: fadeUp .35s ease both;
+  padding: 8px 0 20px;
 }
 
 @keyframes fadeUp {
@@ -152,9 +157,60 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.landing-hero {
-  text-align: center;
-  margin-bottom: 14px;
+/* ── Split layout: Jessica photo | Upload side ── */
+.landing-split {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+/* ── Jessica photo panel ── */
+.jessica-panel {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(79,70,229,.22), 0 2px 8px rgba(0,0,0,.12);
+  background: linear-gradient(160deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
+}
+
+.jessica-hero-img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: top center;
+  max-height: 540px;
+}
+
+.jessica-panel-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(15,12,60,.92) 0%, rgba(15,12,60,.5) 60%, transparent 100%);
+  padding: 24px 20px 18px;
+}
+
+.jessica-panel-name {
+  font-size: 22px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -.4px;
+}
+
+.jessica-panel-title {
+  font-size: 12px;
+  color: rgba(196,181,253,.9);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-top: 2px;
+}
+
+/* ── Right column ── */
+.landing-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 8px;
 }
 
 .landing-eyebrow {
@@ -169,15 +225,14 @@ body {
   font-weight: 700;
   letter-spacing: .05em;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  width: fit-content;
 }
 
 .landing-title {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 900;
-  letter-spacing: -.8px;
-  line-height: 1.15;
-  margin-bottom: 8px;
+  letter-spacing: -.9px;
+  line-height: 1.12;
   background: linear-gradient(135deg, #1e1b4b 0%, #4f46e5 50%, #7c3aed 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -187,32 +242,8 @@ body {
 .landing-sub {
   font-size: 13px;
   color: var(--gray);
-  line-height: 1.65;
-  max-width: 460px;
-  margin: 0 auto;
-}
-
-/* ─── Jessica Intro Card ───────────────────────────────────────────────────── */
-.jessica-intro {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  background: white;
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border);
-  position: relative;
-  overflow: hidden;
-}
-
-.jessica-intro::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+  line-height: 1.7;
+  max-width: 420px;
 }
 
 .jessica-name  { font-size: 13px; font-weight: 700; margin-bottom: 3px; }

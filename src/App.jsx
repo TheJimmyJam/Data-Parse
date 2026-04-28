@@ -561,46 +561,43 @@ export default function App() {
         {/* IDLE */}
         {status === 'idle' && (
           <div className="landing">
-            <div className="landing-hero">
-              <div className="landing-eyebrow">
-                <span>✦</span> AI Document Analyst
-              </div>
-              <h1 className="landing-title">Any document.<br />Instant clarity.</h1>
-              <p className="landing-sub">
-                Upload anything — and Jessica will tell you exactly what it is,
-                who's involved, and what you need to know.
-              </p>
-            </div>
+            <div className="landing-split">
 
-            <div className="jessica-intro">
-              <img src="/jessica.png" alt="Jessica" className="jessica-avatar large" />
-              <div>
-                <div className="jessica-name">Hi, I'm Jessica.</div>
-                <div className="jessica-desc">
-                  I can read any document — legal contracts, insurance policies, financial statements,
-                  medical records, government filings, historical documents, scientific papers — and give you
-                  a structured breakdown of what it says, who's involved, and what matters.
+              {/* ── Jessica photo panel ── */}
+              <div className="jessica-panel">
+                <img src="/jessica.png" alt="Jessica" className="jessica-hero-img" />
+                <div className="jessica-panel-overlay">
+                  <div className="jessica-panel-name">Jessica</div>
+                  <div className="jessica-panel-title">AI Document Analyst</div>
                 </div>
               </div>
-            </div>
 
-            <UploadZone onFile={handleFile} />
+              {/* ── Right: intro + upload ── */}
+              <div className="landing-right">
+                <div className="landing-eyebrow"><span>✦</span> Powered by Claude AI</div>
+                <h1 className="landing-title">Any document.<br />Instant clarity.</h1>
+                <p className="landing-sub">
+                  Drop a file and Jessica reads it cover to cover — contracts, insurance policies,
+                  medical records, court filings, financial statements, anything. She'll tell you
+                  exactly what it is, who's involved, and what matters.
+                </p>
 
-            <div className="supports-row">
-              <span>Accepts:</span>
-              {['PDF', 'CSV', 'XLSX', 'TXT', 'JSON', 'Markdown'].map(t => (
-                <Badge key={t} label={t} color="gray" />
-              ))}
-            </div>
+                <UploadZone onFile={handleFile} />
 
-            <div className="example-docs">
-              <div className="example-docs-label">Works on anything — for example</div>
-              <div className="example-chips">
-                {[
-                  'Insurance Policy', 'Legal Contract', 'Bill of Rights',
-                  'Medical Record', 'Financial Statement', 'Court Ruling',
-                  'Scientific Paper', 'Loss Run Report', 'Corporate Bylaws', 'Tax Document'
-                ].map(d => <span key={d} className="example-chip">{d}</span>)}
+                <div className="supports-row">
+                  <span>Accepts:</span>
+                  {['PDF', 'CSV', 'XLSX', 'TXT', 'JSON', 'Markdown'].map(t => (
+                    <Badge key={t} label={t} color="gray" />
+                  ))}
+                </div>
+
+                <div className="example-chips">
+                  {[
+                    'Insurance Policy', 'Legal Contract', 'Bill of Rights',
+                    'Medical Record', 'Financial Statement', 'Court Ruling',
+                    'Loss Run Report', 'Tax Document',
+                  ].map(d => <span key={d} className="example-chip">{d}</span>)}
+                </div>
               </div>
             </div>
           </div>
