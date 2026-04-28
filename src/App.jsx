@@ -483,17 +483,6 @@ export default function App() {
   const [meta, setMeta] = useState(null);
   const [error, setError] = useState('');
   const [currentFile, setCurrentFile] = useState(null);
-  const pollRef = useRef(null);
-  const timeoutRef = useRef(null);
-
-  // Clean up any running poll/timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (pollRef.current)    clearInterval(pollRef.current);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
-
   const handleFile = async (file) => {
     // Body size guard — Netlify limit is ~6MB; base64 adds ~33%
     const MAX_BYTES = 4.5 * 1024 * 1024;
@@ -503,10 +492,6 @@ export default function App() {
       return;
     }
 
-    // Clear any previous poll
-    if (pollRef.current)    clearInterval(pollRef.current);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
     setCurrentFile(file);
     setStatus('loading');
     setResult(null);
@@ -514,50 +499,29 @@ export default function App() {
 
     try {
       const fileContent = await fileToBase64(file);
-      const jobId = crypto.randomUUID();
 
-      // Fire the background function — returns 202 immediately
-      const kickoff = await fetch('/.netlify/functions/parse-document-background', {
+      const response = await fetch('/.netlify/functions/parse-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
+        body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
       });
 
-      if (!kickoff.ok && kickoff.status !== 202) {
-        throw new Error(`Failed to start processing (status ${kickoff.status}). Check your Netlify env vars.`);
+      // Read as text first — avoids cryptic browser JSON parse errors on non-JSON responses
+      const rawText = await response.text();
+      let json;
+      try {
+        json = JSON.parse(rawText);
+      } catch {
+        if (response.status === 413) throw new Error('File is too large for the server. Try a smaller file.');
+        if (response.status === 502 || response.status === 504) throw new Error('Request timed out. Try a shorter document.');
+        throw new Error(`Unexpected server response (${response.status}). Check that ANTHROPIC_API_KEY is set in Netlify environment variables.`);
       }
 
-      // Poll get-result every 2.5 seconds
-      pollRef.current = setInterval(async () => {
-        try {
-          const res  = await fetch(`/.netlify/functions/get-result?jobId=${jobId}`);
-          const data = await res.json();
+      if (!response.ok || !json.success) throw new Error(json.error || `Server error ${response.status}`);
 
-          if (data.status === 'done') {
-            clearInterval(pollRef.current);
-            clearTimeout(timeoutRef.current);
-            setResult({ success: true, data: data.result, meta: data.meta });
-            setMeta(data.meta);
-            setStatus('done');
-          } else if (data.status === 'error') {
-            clearInterval(pollRef.current);
-            clearTimeout(timeoutRef.current);
-            setError(data.error || 'Processing failed.');
-            setStatus('error');
-          }
-          // status === 'pending' or 'processing' → keep polling
-        } catch {
-          // Network hiccup — keep polling silently
-        }
-      }, 2500);
-
-      // Hard timeout at 3 minutes
-      timeoutRef.current = setTimeout(() => {
-        clearInterval(pollRef.current);
-        setError('Processing timed out after 3 minutes. The document may be too complex — try a shorter one.');
-        setStatus('error');
-      }, 3 * 60 * 1000);
-
+      setResult(json);
+      setMeta(json.meta);
+      setStatus('done');
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
       setStatus('error');
@@ -565,8 +529,6 @@ export default function App() {
   };
 
   const reset = () => {
-    if (pollRef.current)    clearInterval(pollRef.current);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setStatus('idle');
     setResult(null);
     setMeta(null);
