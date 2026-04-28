@@ -280,7 +280,7 @@ function ResultsPanel({ result, meta }) {
       {/* ── Jessica's Summary ── */}
       {data.summary && (
         <div className="summary-box">
-          <div className="summary-avatar">J</div>
+          <img src="/jessica.png" alt="Jessica" className="summary-avatar" />
           <div>
             <div className="summary-label">Jessica's Summary</div>
             <p className="summary-text">{data.summary}</p>
@@ -465,7 +465,7 @@ function LoadingSpinner({ fileName }) {
 
   return (
     <div className="loading-page">
-      <div className="jessica-avatar loading-avatar">J</div>
+      <img src="/jessica.png" alt="Jessica" className="jessica-avatar loading-avatar" />
       {fileName && <div className="loading-filename">📄 {fileName}</div>}
       <div className="spinner-ring" />
       <div className="loading-text">{LOADING_MESSAGES[msgIdx]}</div>
@@ -573,7 +573,7 @@ export default function App() {
             </div>
 
             <div className="jessica-intro">
-              <div className="jessica-avatar large">J</div>
+              <img src="/jessica.png" alt="Jessica" className="jessica-avatar large" />
               <div>
                 <div className="jessica-name">Hi, I'm Jessica.</div>
                 <div className="jessica-desc">

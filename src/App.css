@@ -112,16 +112,24 @@ body {
 
 /* ─── Jessica Avatar ───────────────────────────────────────────────────────── */
 .jessica-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  color: white; font-weight: 800; font-size: 13px;
-  display: flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; border-radius: 50%;
+  object-fit: cover; object-position: top center;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(99,102,241,.4);
-  border: 2px solid rgba(255,255,255,.2);
+  box-shadow: 0 2px 10px rgba(99,102,241,.35);
+  border: 2px solid rgba(255,255,255,.4);
 }
-.jessica-avatar.large { width: 40px; height: 40px; font-size: 17px; }
-.jessica-avatar.loading-avatar { width: 56px; height: 56px; font-size: 22px; box-shadow: 0 0 0 10px rgba(99,102,241,.08), 0 2px 12px rgba(99,102,241,.35); }
+.jessica-avatar.large { width: 80px; height: 80px; }
+.jessica-avatar.loading-avatar {
+  width: 90px; height: 90px;
+  box-shadow: 0 0 0 10px rgba(99,102,241,.08), 0 4px 20px rgba(99,102,241,.4);
+}
+.summary-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  object-fit: cover; object-position: top center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(99,102,241,.3);
+  border: 2px solid rgba(255,255,255,.5);
+}
 
 /* ─── Main ─────────────────────────────────────────────────────────────────── */
 .app-main {
