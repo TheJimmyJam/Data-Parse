@@ -435,13 +435,22 @@ function UploadZone({ onFile, compact = false }) {
 
 // ─── Loading ──────────────────────────────────────────────────────────────────
 const LOADING_MESSAGES = [
-  'Jessica is reading your document…',
-  'Identifying the document type…',
-  'Mapping the relevant parties…',
-  'Extracting key dates and amounts…',
-  'Breaking down the sections…',
-  'Flagging anything worth noting…',
-  'Almost there…',
+  "Jessica is reviewing your document…",
+  "She's blonde, so bear with her…",
+  "Wow, this is a lot of words…",
+  "Skipping to the fun parts…",
+  "There are no fun parts…",
+  "Okay fine, reading the whole thing…",
+  "Highlighting things that sound important…",
+  "Googling words she doesn't recognize…",
+  "Your document is very boring, just so you know…",
+  "Almost done — or at least pretending to be…",
+  "Cross-referencing with her horoscope…",
+  "Asking the other Jessicas for a second opinion…",
+  "This is taking a while… it must be a legal document…",
+  "Found something interesting — nevermind, it's a typo…",
+  "Pulling the important stuff to the top so you look smart…",
+  "Wrapping up… she needs a coffee after this…",
 ];
 
 function LoadingSpinner({ fileName }) {
