@@ -483,15 +483,29 @@ export default function App() {
   const [meta, setMeta] = useState(null);
   const [error, setError] = useState('');
   const [currentFile, setCurrentFile] = useState(null);
+  const pollRef = useRef(null);
+  const timeoutRef = useRef(null);
+
+  // Clean up any running poll/timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current)    clearInterval(pollRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const handleFile = async (file) => {
-    // Guard: Netlify sync functions have a ~6MB body limit; base64 adds ~33% overhead
-    const MAX_BYTES = 4.5 * 1024 * 1024; // 4.5 MB raw → ~6 MB base64
+    // Body size guard — Netlify limit is ~6MB; base64 adds ~33%
+    const MAX_BYTES = 4.5 * 1024 * 1024;
     if (file.size > MAX_BYTES) {
       setError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file under 4.5 MB.`);
       setStatus('error');
       return;
     }
+
+    // Clear any previous poll
+    if (pollRef.current)    clearInterval(pollRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
     setCurrentFile(file);
     setStatus('loading');
@@ -500,36 +514,50 @@ export default function App() {
 
     try {
       const fileContent = await fileToBase64(file);
+      const jobId = crypto.randomUUID();
 
-      const response = await fetch('/.netlify/functions/parse-document', {
+      // Fire the background function — returns 202 immediately
+      const kickoff = await fetch('/.netlify/functions/parse-document-background', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
+        body: JSON.stringify({ jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
       });
 
-      // Read body as text first — if Netlify returns an HTML error page or
-      // the function times out, response.json() would throw the cryptic
-      // "string did not match expected pattern" error.
-      const rawText = await response.text();
-      let json;
-      try {
-        json = JSON.parse(rawText);
-      } catch {
-        // Server returned non-JSON (timeout HTML page, 413, etc.)
-        if (response.status === 413) {
-          throw new Error('File is too large for the server to process. Try a smaller file.');
-        } else if (response.status === 502 || response.status === 504) {
-          throw new Error('The request timed out. Try a smaller or simpler document.');
-        } else {
-          throw new Error(`Unexpected server response (status ${response.status}). Check that your API key is set in Netlify environment variables.`);
-        }
+      if (!kickoff.ok && kickoff.status !== 202) {
+        throw new Error(`Failed to start processing (status ${kickoff.status}). Check your Netlify env vars.`);
       }
 
-      if (!response.ok || !json.success) throw new Error(json.error || `Server error ${response.status}`);
+      // Poll get-result every 2.5 seconds
+      pollRef.current = setInterval(async () => {
+        try {
+          const res  = await fetch(`/.netlify/functions/get-result?jobId=${jobId}`);
+          const data = await res.json();
 
-      setResult(json);
-      setMeta(json.meta);
-      setStatus('done');
+          if (data.status === 'done') {
+            clearInterval(pollRef.current);
+            clearTimeout(timeoutRef.current);
+            setResult({ success: true, data: data.result, meta: data.meta });
+            setMeta(data.meta);
+            setStatus('done');
+          } else if (data.status === 'error') {
+            clearInterval(pollRef.current);
+            clearTimeout(timeoutRef.current);
+            setError(data.error || 'Processing failed.');
+            setStatus('error');
+          }
+          // status === 'pending' or 'processing' → keep polling
+        } catch {
+          // Network hiccup — keep polling silently
+        }
+      }, 2500);
+
+      // Hard timeout at 3 minutes
+      timeoutRef.current = setTimeout(() => {
+        clearInterval(pollRef.current);
+        setError('Processing timed out after 3 minutes. The document may be too complex — try a shorter one.');
+        setStatus('error');
+      }, 3 * 60 * 1000);
+
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
       setStatus('error');
@@ -537,6 +565,8 @@ export default function App() {
   };
 
   const reset = () => {
+    if (pollRef.current)    clearInterval(pollRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setStatus('idle');
     setResult(null);
     setMeta(null);
