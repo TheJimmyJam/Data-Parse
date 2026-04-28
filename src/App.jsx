@@ -1,56 +1,65 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 const ACCEPTED_EXTENSIONS = ['.pdf', '.csv', '.xlsx', '.xls', '.txt', '.json', '.tsv', '.md'];
+const MAX_BYTES = 4.5 * 1024 * 1024;
+const HISTORY_KEY = 'dp_history';
+const MAX_HISTORY = 40;
+const MAX_FILES = 8;
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(',')[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
   });
 }
-
 function isAccepted(file) {
   const ext = '.' + file.name.split('.').pop().toLowerCase();
   return ACCEPTED_EXTENSIONS.includes(ext) || file.type.includes('text') ||
     file.type === 'application/pdf' || file.type.includes('spreadsheet') || file.type.includes('excel');
 }
-
 function fmt(val) {
   if (val === null || val === undefined || val === '') return null;
   if (typeof val === 'object' && !Array.isArray(val) && Object.keys(val).length === 0) return null;
   return val;
 }
-
-function hasContent(arr) {
-  return Array.isArray(arr) && arr.length > 0;
+function hasContent(arr) { return Array.isArray(arr) && arr.length > 0; }
+function timeAgo(iso) {
+  const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (secs < 60) return 'just now';
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  return `${Math.floor(secs / 86400)}d ago`;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── LocalStorage history ─────────────────────────────────────────────────────
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
+}
+function saveHistory(items) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, MAX_HISTORY))); } catch {}
+}
+
+// ─── Badges / UI atoms ───────────────────────────────────────────────────────
 function Badge({ label, color = 'indigo' }) {
   return <span className={`badge badge-${color}`}>{label}</span>;
 }
-
 function ConfidencePip({ level }) {
   const map = { High: 'green', Medium: 'yellow', Low: 'red' };
   return <Badge label={`${level} Confidence`} color={map[level] || 'gray'} />;
 }
-
 function Section({ title, children, icon, fullWidth = false }) {
   return (
     <div className={`section ${fullWidth ? 'section-full' : ''}`}>
-      <h3 className="section-title">
-        {icon && <span className="section-icon">{icon}</span>}
-        {title}
-      </h3>
+      <h3 className="section-title">{icon && <span className="section-icon">{icon}</span>}{title}</h3>
       <div className="section-body">{children}</div>
     </div>
   );
 }
-
 function Field({ label, value }) {
   if (!fmt(value)) return null;
   return (
@@ -61,68 +70,49 @@ function Field({ label, value }) {
   );
 }
 
+// ─── Tables ───────────────────────────────────────────────────────────────────
 function PartiesTable({ parties }) {
   if (!hasContent(parties)) return <p className="empty-note">No parties identified.</p>;
   return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Name</th><th>Role</th><th>Type</th><th>Contact / Notes</th></tr>
-        </thead>
-        <tbody>
-          {parties.map((p, i) => (
-            <tr key={i}>
-              <td><strong>{p.name || '—'}</strong></td>
-              <td><Badge label={p.role || 'Unknown'} color="indigo" /></td>
-              <td>{p.type || '—'}</td>
-              <td>{[p.contact, p.notes].filter(Boolean).join(' · ') || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <div className="table-wrap"><table>
+      <thead><tr><th>Name</th><th>Role</th><th>Type</th><th>Contact / Notes</th></tr></thead>
+      <tbody>{parties.map((p, i) => (
+        <tr key={i}>
+          <td><strong>{p.name || '—'}</strong></td>
+          <td><Badge label={p.role || 'Unknown'} color="indigo" /></td>
+          <td>{p.type || '—'}</td>
+          <td>{[p.contact, p.notes].filter(Boolean).join(' · ') || '—'}</td>
+        </tr>
+      ))}</tbody>
+    </table></div>
   );
 }
-
 function KeyDatesTable({ dates }) {
   if (!hasContent(dates)) return <p className="empty-note">No key dates found.</p>;
   return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr><th>Date</th><th>Significance</th></tr></thead>
-        <tbody>
-          {dates.map((d, i) => (
-            <tr key={i}>
-              <td className="mono">{d.date || '—'}</td>
-              <td>{d.label || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <div className="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Significance</th></tr></thead>
+      <tbody>{dates.map((d, i) => (
+        <tr key={i}><td className="mono">{d.date || '—'}</td><td>{d.label || '—'}</td></tr>
+      ))}</tbody>
+    </table></div>
   );
 }
-
 function AmountsTable({ amounts }) {
   if (!hasContent(amounts)) return <p className="empty-note">No amounts found.</p>;
   return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr><th>Amount</th><th>Currency</th><th>Represents</th></tr></thead>
-        <tbody>
-          {amounts.map((a, i) => (
-            <tr key={i}>
-              <td className="mono amount">{a.amount || '—'}</td>
-              <td>{a.currency || '—'}</td>
-              <td>{a.label || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <div className="table-wrap"><table>
+      <thead><tr><th>Amount</th><th>Currency</th><th>Represents</th></tr></thead>
+      <tbody>{amounts.map((a, i) => (
+        <tr key={i}>
+          <td className="mono amount">{a.amount || '—'}</td>
+          <td>{a.currency || '—'}</td>
+          <td>{a.label || '—'}</td>
+        </tr>
+      ))}</tbody>
+    </table></div>
   );
 }
-
 function SectionCards({ sections }) {
   if (!hasContent(sections)) return <p className="empty-note">No sections identified.</p>;
   return (
@@ -131,75 +121,49 @@ function SectionCards({ sections }) {
         <div key={i} className="section-card">
           <div className="section-card-title">{s.title || `Section ${i + 1}`}</div>
           {s.summary && <p className="section-card-summary">{s.summary}</p>}
-          {hasContent(s.keyPoints) && (
-            <ul className="key-points">
-              {s.keyPoints.map((kp, j) => <li key={j}>{kp}</li>)}
-            </ul>
-          )}
+          {hasContent(s.keyPoints) && <ul className="key-points">{s.keyPoints.map((kp, j) => <li key={j}>{kp}</li>)}</ul>}
         </div>
       ))}
     </div>
   );
 }
-
 function ObligationsTable({ obligations }) {
   if (!hasContent(obligations)) return <p className="empty-note">No obligations found.</p>;
   return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr><th>Party</th><th>Must Do</th><th>By When</th></tr></thead>
-        <tbody>
-          {obligations.map((o, i) => (
-            <tr key={i}>
-              <td><strong>{o.party || '—'}</strong></td>
-              <td>{o.obligation || '—'}</td>
-              <td className="mono">{o.deadline || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <div className="table-wrap"><table>
+      <thead><tr><th>Party</th><th>Must Do</th><th>By When</th></tr></thead>
+      <tbody>{obligations.map((o, i) => (
+        <tr key={i}>
+          <td><strong>{o.party || '—'}</strong></td>
+          <td>{o.obligation || '—'}</td>
+          <td className="mono">{o.deadline || '—'}</td>
+        </tr>
+      ))}</tbody>
+    </table></div>
   );
 }
-
 function RightsTable({ rights }) {
   if (!hasContent(rights)) return <p className="empty-note">No rights identified.</p>;
   return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr><th>Party</th><th>Right</th></tr></thead>
-        <tbody>
-          {rights.map((r, i) => (
-            <tr key={i}>
-              <td><strong>{r.party || '—'}</strong></td>
-              <td>{r.right || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <div className="table-wrap"><table>
+      <thead><tr><th>Party</th><th>Right</th></tr></thead>
+      <tbody>{rights.map((r, i) => (
+        <tr key={i}><td><strong>{r.party || '—'}</strong></td><td>{r.right || '—'}</td></tr>
+      ))}</tbody>
+    </table></div>
   );
 }
-
 function DefinitionsTable({ definitions }) {
   if (!hasContent(definitions)) return <p className="empty-note">No definitions found.</p>;
   return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr><th>Term</th><th>Definition</th></tr></thead>
-        <tbody>
-          {definitions.map((d, i) => (
-            <tr key={i}>
-              <td><strong>{d.term || '—'}</strong></td>
-              <td>{d.definition || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <div className="table-wrap"><table>
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>{definitions.map((d, i) => (
+        <tr key={i}><td><strong>{d.term || '—'}</strong></td><td>{d.definition || '—'}</td></tr>
+      ))}</tbody>
+    </table></div>
   );
 }
-
 function StringList({ items, color = 'gray' }) {
   if (!hasContent(items)) return <p className="empty-note">None identified.</p>;
   return (
@@ -210,16 +174,10 @@ function StringList({ items, color = 'gray' }) {
     </ul>
   );
 }
-
 function CustomFields({ data }) {
-  if (!data || typeof data !== 'object' || Object.keys(data).length === 0) return null;
-
-  // Filter out the meta instructions string Claude sometimes puts in the key
-  const entries = Object.entries(data).filter(
-    ([k, v]) => v !== null && v !== undefined && v !== '' && k.length < 80
-  );
+  if (!data || typeof data !== 'object') return null;
+  const entries = Object.entries(data).filter(([k, v]) => v !== null && v !== undefined && v !== '' && k.length < 80);
   if (entries.length === 0) return null;
-
   return (
     <Section title="Additional Data" icon="📌" fullWidth>
       <div className="custom-fields">
@@ -227,16 +185,110 @@ function CustomFields({ data }) {
           <div key={i} className="field">
             <span className="field-label">{key}</span>
             <span className="field-value">
-              {Array.isArray(value)
-                ? value.join(' · ')
-                : typeof value === 'object'
-                ? JSON.stringify(value, null, 2)
-                : String(value)}
+              {Array.isArray(value) ? value.join(' · ') : typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
             </span>
           </div>
         ))}
       </div>
     </Section>
+  );
+}
+
+// ─── History Panel ────────────────────────────────────────────────────────────
+function HistoryPanel({ history, onSelect, onClear, selectedId, onClose }) {
+  if (!hasContent(history)) return null;
+  return (
+    <div className="history-panel">
+      <div className="history-header">
+        <span className="history-title">📁 History</span>
+        <div className="history-header-actions">
+          <button className="btn btn-ghost btn-sm" onClick={onClear}>Clear</button>
+          <button className="history-close" onClick={onClose}>✕</button>
+        </div>
+      </div>
+      <div className="history-list">
+        {history.map((item) => {
+          const isSelected = item.id === selectedId;
+          const docCount = item.jobs?.length || 0;
+          const label = item.batchAnalysis?.related && item.batchAnalysis?.groupName
+            ? item.batchAnalysis.groupName
+            : docCount > 1
+            ? `${docCount} documents`
+            : item.jobs?.[0]?.documentType || item.jobs?.[0]?.fileName || 'Document';
+          return (
+            <div
+              key={item.id}
+              className={`history-item ${isSelected ? 'selected' : ''}`}
+              onClick={() => onSelect(item)}
+            >
+              <div className="history-item-label">{label}</div>
+              {docCount > 1 && (
+                <div className="history-item-files">
+                  {item.jobs.map((j, i) => <span key={i} className="history-file-chip">{j.fileName}</span>)}
+                </div>
+              )}
+              <div className="history-item-meta">
+                {item.jobs?.[0]?.documentCategory && <Badge label={item.jobs[0].documentCategory} color="gray" />}
+                <span className="history-time">{timeAgo(item.timestamp)}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Batch Summary Panel ──────────────────────────────────────────────────────
+function BatchSummaryPanel({ analysis }) {
+  if (!analysis || !analysis.related) return null;
+  return (
+    <div className="batch-summary">
+      <div className="batch-summary-header">
+        <img src="/jessica.png" alt="Jessica" className="summary-avatar" />
+        <div>
+          <div className="batch-summary-label">✦ Jessica's Combined Analysis</div>
+          <div className="batch-summary-group">{analysis.groupName}</div>
+        </div>
+      </div>
+      {analysis.combinedSummary && <p className="batch-summary-text">{analysis.combinedSummary}</p>}
+      {hasContent(analysis.keyInsights) && (
+        <div className="batch-insights">
+          <div className="batch-insights-label">Cross-document insights</div>
+          <ul>{analysis.keyInsights.map((ins, i) => <li key={i}>{ins}</li>)}</ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Unrelated docs notice ────────────────────────────────────────────────────
+function UnrelatedNotice({ analysis }) {
+  if (!analysis || analysis.related) return null;
+  return (
+    <div className="unrelated-notice">
+      <span>📂</span>
+      <span>These documents appear unrelated — {analysis.reason} Results are shown separately below.</span>
+    </div>
+  );
+}
+
+// ─── Results Tabs ─────────────────────────────────────────────────────────────
+function ResultsTabs({ jobs, activeIdx, onSelect }) {
+  if (jobs.length <= 1) return null;
+  return (
+    <div className="results-tabs">
+      {jobs.map((job, i) => (
+        <button
+          key={job.id}
+          className={`results-tab ${i === activeIdx ? 'active' : ''}`}
+          onClick={() => onSelect(i)}
+        >
+          <span className="results-tab-name">{job.fileName}</span>
+          {job.documentType && <span className="results-tab-type">{job.documentType}</span>}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -263,10 +315,8 @@ function ResultsPanel({ result, meta }) {
     try {
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-
       const panel = document.querySelector('.results-panel');
       const canvas = await window.html2canvas(panel, { scale: 2, useCORS: true, logging: false });
-
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageW = pdf.internal.pageSize.getWidth();
@@ -274,7 +324,6 @@ function ResultsPanel({ result, meta }) {
       const imgW = pageW;
       const imgH = (canvas.height * imgW) / canvas.width;
       const imgData = canvas.toDataURL('image/png');
-
       pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH);
       let remaining = imgH - pageH;
       while (remaining > 0) {
@@ -282,14 +331,10 @@ function ResultsPanel({ result, meta }) {
         pdf.addImage(imgData, 'PNG', 0, -(imgH - remaining), imgW, imgH);
         remaining -= pageH;
       }
-
       const fileName = (data.documentType || 'document').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
       pdf.save(`${fileName}-jessica-analysis.pdf`);
-    } catch (err) {
-      alert('PDF export failed: ' + err.message);
-    } finally {
-      setExporting(false);
-    }
+    } catch (err) { alert('PDF export failed: ' + err.message); }
+    finally { setExporting(false); }
   };
 
   const categoryColor = {
@@ -300,8 +345,6 @@ function ResultsPanel({ result, meta }) {
 
   return (
     <div className="results-panel">
-
-      {/* ── Header ── */}
       <div className="results-header">
         <div className="results-header-left">
           <div className="jessica-tag">✦ Analyzed by Jessica</div>
@@ -322,7 +365,6 @@ function ResultsPanel({ result, meta }) {
         </div>
       </div>
 
-      {/* ── Jessica's Summary ── */}
       {data.summary && (
         <div className="summary-box">
           <img src="/jessica.png" alt="Jessica" className="summary-avatar" />
@@ -333,90 +375,51 @@ function ResultsPanel({ result, meta }) {
         </div>
       )}
 
-      {/* ── Flags ── */}
       {hasContent(data.flags) && (
         <div className="flags-box">
           <div className="flags-title">⚠️ Notable Items</div>
-          <ul>
-            {data.flags.map((f, i) => <li key={i}>{f}</li>)}
-          </ul>
+          <ul>{data.flags.map((f, i) => <li key={i}>{f}</li>)}</ul>
         </div>
       )}
 
-      {/* ── Main Grid ── */}
       <div className="results-grid">
-
-        {/* Parties */}
         <Section title="Relevant Parties" icon="👥" fullWidth>
           <PartiesTable parties={data.parties} />
         </Section>
-
-        {/* Dates */}
-        {hasContent(data.keyDates) && (
-          <Section title="Key Dates" icon="📅">
-            <KeyDatesTable dates={data.keyDates} />
-          </Section>
-        )}
-
-        {/* Amounts */}
-        {hasContent(data.keyAmounts) && (
-          <Section title="Key Amounts" icon="💰">
-            <AmountsTable amounts={data.keyAmounts} />
-          </Section>
-        )}
-
+        {hasContent(data.keyDates) && <Section title="Key Dates" icon="📅"><KeyDatesTable dates={data.keyDates} /></Section>}
+        {hasContent(data.keyAmounts) && <Section title="Key Amounts" icon="💰"><AmountsTable amounts={data.keyAmounts} /></Section>}
       </div>
 
-      {/* ── Sections / Breakdown ── */}
       {hasContent(data.sections) && (
         <Section title="Document Breakdown" icon="📋" fullWidth>
           <SectionCards sections={data.sections} />
         </Section>
       )}
 
-      {/* ── Rights & Obligations ── */}
       {(hasContent(data.obligations) || hasContent(data.rights)) && (
         <div className="results-grid">
-          {hasContent(data.obligations) && (
-            <Section title="Obligations" icon="📌">
-              <ObligationsTable obligations={data.obligations} />
-            </Section>
-          )}
-          {hasContent(data.rights) && (
-            <Section title="Rights" icon="⚖️">
-              <RightsTable rights={data.rights} />
-            </Section>
-          )}
+          {hasContent(data.obligations) && <Section title="Obligations" icon="📌"><ObligationsTable obligations={data.obligations} /></Section>}
+          {hasContent(data.rights) && <Section title="Rights" icon="⚖️"><RightsTable rights={data.rights} /></Section>}
         </div>
       )}
 
-      {/* ── Restrictions ── */}
       {hasContent(data.restrictions) && (
         <Section title="Restrictions & Exclusions" icon="🚫" fullWidth>
           <StringList items={data.restrictions} color="red" />
         </Section>
       )}
-
-      {/* ── Definitions ── */}
       {hasContent(data.definitions) && (
         <Section title="Defined Terms" icon="📖" fullWidth>
           <DefinitionsTable definitions={data.definitions} />
         </Section>
       )}
-
-      {/* ── Tags ── */}
       {hasContent(data.tags) && (
         <Section title="Topics & Keywords" icon="🏷️" fullWidth>
-          <div className="tags-row">
-            {data.tags.map((t, i) => <Badge key={i} label={t} color="gray" />)}
-          </div>
+          <div className="tags-row">{data.tags.map((t, i) => <Badge key={i} label={t} color="gray" />)}</div>
         </Section>
       )}
-
-      {/* ── Custom Fields (insurance, medical, etc.) ── */}
       <CustomFields data={data.customFields} />
 
-      {/* ── Raw JSON ── */}
       <div className="raw-toggle">
         <button className="btn btn-ghost btn-sm" onClick={() => setShowRaw(!showRaw)}>
           {showRaw ? '▲ Hide' : '▼ Show'} Raw JSON
@@ -428,17 +431,17 @@ function ResultsPanel({ result, meta }) {
 }
 
 // ─── Upload Zone ──────────────────────────────────────────────────────────────
-function UploadZone({ onFile, compact = false }) {
+function UploadZone({ onFiles, compact = false }) {
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef(null);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file && isAccepted(file)) onFile(file);
+    const files = Array.from(e.dataTransfer.files).filter(isAccepted);
+    if (files.length) onFiles(files);
     else alert('Unsupported file type. Try PDF, CSV, XLSX, or TXT.');
-  }, [onFile]);
+  }, [onFiles]);
 
   return (
     <div
@@ -451,8 +454,9 @@ function UploadZone({ onFile, compact = false }) {
       <input
         ref={inputRef}
         type="file"
+        multiple
         accept=".pdf,.csv,.xlsx,.xls,.txt,.json,.tsv,.md"
-        onChange={(e) => { const f = e.target.files[0]; if (f) onFile(f); e.target.value = ''; }}
+        onChange={(e) => { const f = Array.from(e.target.files).filter(isAccepted); if (f.length) onFiles(f); e.target.value = ''; }}
         style={{ display: 'none' }}
       />
       {compact ? (
@@ -466,12 +470,11 @@ function UploadZone({ onFile, compact = false }) {
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
-              <line x1="12" y1="18" x2="12" y2="12"/>
-              <polyline points="9 15 12 12 15 15"/>
+              <line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/>
             </svg>
           </div>
-          <div className="upload-text">Drop a file here, or click to browse</div>
-          <div className="upload-sub">PDF · CSV · XLSX · TXT · JSON · Markdown</div>
+          <div className="upload-text">Drop one or more files, or click to browse</div>
+          <div className="upload-sub">PDF · CSV · XLSX · TXT · JSON · Markdown &nbsp;·&nbsp; Up to {MAX_FILES} files at once</div>
         </>
       )}
     </div>
@@ -498,215 +501,328 @@ const LOADING_MESSAGES = [
   "Wrapping up… she needs a coffee after this…",
 ];
 
-function LoadingSpinner({ fileName }) {
+function MultiLoadingView({ jobs }) {
   const [msgIdx, setMsgIdx] = useState(0);
-
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMsgIdx((i) => (i + 1) % LOADING_MESSAGES.length);
-    }, 2400);
-    return () => clearInterval(interval);
+    const t = setInterval(() => setMsgIdx(i => (i + 1) % LOADING_MESSAGES.length), 2400);
+    return () => clearInterval(t);
   }, []);
+
+  const done = jobs.filter(j => j.status === 'done').length;
+  const total = jobs.length;
 
   return (
     <div className="loading-page">
       <img src="/jessica.png" alt="Jessica" className="jessica-avatar loading-avatar" />
-      {fileName && <div className="loading-filename">📄 {fileName}</div>}
+      <div className="loading-progress-label">{done < total ? `${done} of ${total} complete` : 'Comparing documents…'}</div>
+      <div className="multi-job-list">
+        {jobs.map(job => (
+          <div key={job.id} className={`multi-job-item status-${job.status}`}>
+            <span className="multi-job-icon">
+              {job.status === 'done' ? '✓' : job.status === 'error' ? '✗' : '⏳'}
+            </span>
+            <span className="multi-job-name">{job.fileName}</span>
+            <span className="multi-job-status">{job.status === 'done' ? job.documentType || 'Done' : job.status === 'error' ? 'Failed' : 'Processing…'}</span>
+          </div>
+        ))}
+      </div>
       <div className="spinner-ring" />
       <div className="loading-text">{LOADING_MESSAGES[msgIdx]}</div>
-      <div className="loading-dots">
-        <span /><span /><span />
-      </div>
     </div>
   );
 }
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [status, setStatus] = useState('idle');
-  const [result, setResult] = useState(null);
-  const [meta, setMeta] = useState(null);
+  const [status, setStatus] = useState('idle'); // idle | loading | done | error
+  const [jobs, setJobs] = useState([]);
+  const [batchAnalysis, setBatchAnalysis] = useState(null);
+  const [activeJobIdx, setActiveJobIdx] = useState(0);
   const [error, setError] = useState('');
-  const [currentFile, setCurrentFile] = useState(null);
-  const handleFile = async (file) => {
-    const MAX_BYTES = 4.5 * 1024 * 1024;
-    if (file.size > MAX_BYTES) {
-      setError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file under 4.5 MB.`);
+  const [history, setHistory] = useState(loadHistory);
+  const [viewingItem, setViewingItem] = useState(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const pushHistory = (entry) => {
+    const updated = [entry, ...history].slice(0, MAX_HISTORY);
+    setHistory(updated);
+    saveHistory(updated);
+  };
+
+  const clearHistory = () => { setHistory([]); saveHistory([]); setViewingItem(null); };
+
+  const handleFiles = async (fileList) => {
+    const files = fileList.slice(0, MAX_FILES);
+    const oversized = files.filter(f => f.size > MAX_BYTES);
+    if (oversized.length) {
+      setError(`${oversized.map(f => f.name).join(', ')} exceed the 4.5 MB limit.`);
       setStatus('error');
       return;
     }
 
-    setCurrentFile(file);
+    // Build initial jobs array
+    const initialJobs = files.map(f => ({
+      id: crypto.randomUUID(),
+      jobId: crypto.randomUUID(),
+      fileName: f.name,
+      fileType: f.type || '',
+      status: 'uploading',
+      result: null,
+      meta: null,
+      documentType: null,
+      error: null,
+    }));
+
+    setJobs(initialJobs);
+    setBatchAnalysis(null);
+    setActiveJobIdx(0);
+    setViewingItem(null);
     setStatus('loading');
-    setResult(null);
     setError('');
 
-    try {
-      const fileContent = await fileToBase64(file);
-      const jobId = crypto.randomUUID();
+    // Start all jobs in parallel
+    const startJob = async (job, file) => {
+      try {
+        const fileContent = await fileToBase64(file);
 
-      // Kick off background function — returns 202 immediately
-      const startRes = await fetch('/.netlify/functions/parse-document-background', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
-      });
-
-      if (startRes.status !== 202) {
-        // Background function unavailable — fall back to sync
-        const syncRes = await fetch('/.netlify/functions/parse-document', {
+        // Try background function first
+        const startRes = await fetch('/.netlify/functions/parse-document-background', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
+          body: JSON.stringify({ jobId: job.jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
         });
-        const rawText = await syncRes.text();
-        let json;
-        try { json = JSON.parse(rawText); } catch {
-          throw new Error(`Server error (${syncRes.status}). Check that ANTHROPIC_API_KEY is set in Netlify.`);
+
+        if (startRes.status === 202) {
+          // Poll for this job
+          return await pollJob(job.jobId);
+        } else {
+          // Fallback to sync
+          const syncRes = await fetch('/.netlify/functions/parse-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
+          });
+          const text = await syncRes.text();
+          const json = JSON.parse(text);
+          if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
+          return { result: json, meta: json.meta };
         }
-        if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
-        setResult(json);
-        setMeta(json.meta);
-        setStatus('done');
-        return;
+      } catch (err) {
+        return { error: err.message };
       }
+    };
 
-      // Poll Supabase for result
-      const poll = async (attempts = 0) => {
-        if (attempts > 90) { // 3 min max
-          setError('Jessica is taking too long. Please try again.');
-          setStatus('error');
-          return;
+    const pollJob = async (jobId, attempts = 0) => {
+      if (attempts > 90) return { error: 'Timed out waiting for result.' };
+      await new Promise(r => setTimeout(r, 2500));
+      try {
+        const res = await fetch(`/.netlify/functions/get-result?jobId=${jobId}`);
+        const data = await res.json();
+        if (data.status === 'done') return { result: { success: true, data: data.result }, meta: data.meta };
+        if (data.status === 'error') return { error: data.error || 'Processing failed' };
+        return pollJob(jobId, attempts + 1);
+      } catch { return pollJob(jobId, attempts + 1); }
+    };
+
+    // Process all files, updating state as each finishes
+    const jobResults = await Promise.all(
+      files.map(async (file, idx) => {
+        const job = initialJobs[idx];
+        setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'processing' } : j));
+        const outcome = await startJob(job, file);
+
+        if (outcome.error) {
+          setJobs(prev => prev.map(j => j.id === job.id ? { ...j, status: 'error', error: outcome.error } : j));
+          return { ...job, status: 'error', error: outcome.error };
+        } else {
+          const docType = outcome.result?.data?.documentType || null;
+          const docCat = outcome.result?.data?.documentCategory || null;
+          setJobs(prev => prev.map(j => j.id === job.id
+            ? { ...j, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat }
+            : j
+          ));
+          return { ...job, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat };
         }
-        try {
-          const pollRes = await fetch(`/.netlify/functions/get-result?jobId=${jobId}`);
-          const data = await pollRes.json();
+      })
+    );
 
-          if (data.status === 'done') {
-            setResult({ success: true, data: data.result });
-            setMeta(data.meta);
-            setStatus('done');
-          } else if (data.status === 'error') {
-            setError(data.error || 'Processing failed.');
-            setStatus('error');
-          } else {
-            setTimeout(() => poll(attempts + 1), 2000);
-          }
-        } catch {
-          setTimeout(() => poll(attempts + 1), 3000);
-        }
-      };
+    const successfulJobs = jobResults.filter(j => j.status === 'done');
 
-      setTimeout(() => poll(), 3000);
-
-    } catch (err) {
-      setError(err.message || 'An unexpected error occurred.');
-      setStatus('error');
+    // Run batch analysis if 2+ successful docs
+    let batchResult = null;
+    if (successfulJobs.length >= 2) {
+      try {
+        const batchRes = await fetch('/.netlify/functions/analyze-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documents: successfulJobs.map(j => ({
+              fileName: j.fileName,
+              documentType: j.result?.data?.documentType || 'Unknown',
+              documentCategory: j.result?.data?.documentCategory || 'Other',
+              summary: j.result?.data?.summary || '',
+            }))
+          }),
+        });
+        const batchData = await batchRes.json();
+        if (batchData.success) batchResult = batchData;
+      } catch {}
     }
+
+    setBatchAnalysis(batchResult);
+
+    // Save to history
+    if (successfulJobs.length > 0) {
+      pushHistory({
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        jobs: successfulJobs.map(j => ({
+          id: j.id,
+          fileName: j.fileName,
+          fileType: j.fileType,
+          documentType: j.documentType,
+          documentCategory: j.result?.data?.documentCategory || null,
+          result: j.result,
+          meta: j.meta,
+        })),
+        batchAnalysis: batchResult,
+      });
+    }
+
+    setStatus('done');
   };
 
   const reset = () => {
-    setStatus('idle');
-    setResult(null);
-    setMeta(null);
-    setError('');
-    setCurrentFile(null);
+    setStatus('idle'); setJobs([]); setBatchAnalysis(null);
+    setActiveJobIdx(0); setError(''); setViewingItem(null);
   };
+
+  // What to display — current session OR selected history item
+  const displayJobs = viewingItem ? viewingItem.jobs : jobs;
+  const displayBatch = viewingItem ? viewingItem.batchAnalysis : batchAnalysis;
+  const activeJob = displayJobs[activeJobIdx];
 
   return (
     <div className="app">
-
       {/* ── Header ── */}
       <header className="app-header">
         <div className="header-inner">
-          <div className="logo" onClick={status !== 'idle' ? reset : undefined} style={status !== 'idle' ? { cursor: 'pointer' } : {}}>
+          <div className="logo" onClick={reset} style={{ cursor: 'pointer' }}>
             <div className="logo-mark">◈</div>
             <div>
               <div className="logo-title">Data Parse</div>
               <div className="logo-sub">Powered by Jessica, your AI document analyst</div>
             </div>
           </div>
-          {status !== 'idle' && (
-            <button className="btn btn-outline" onClick={reset}>↩ New Document</button>
-          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {history.length > 0 && (
+              <button className="btn btn-outline" onClick={() => setHistoryOpen(o => !o)}>
+                📁 History ({history.length})
+              </button>
+            )}
+            {status !== 'idle' && (
+              <button className="btn btn-outline" onClick={reset}>↩ New Document</button>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* ── Main ── */}
-      <main className="app-main">
+      {/* ── Body: history sidebar + main ── */}
+      <div className="app-body">
 
-        {/* IDLE */}
-        {status === 'idle' && (
-          <div className="landing">
-            <div className="landing-split">
+        {historyOpen && (
+          <HistoryPanel
+            history={history}
+            selectedId={viewingItem?.id}
+            onSelect={(item) => {
+              setViewingItem(item);
+              setActiveJobIdx(0);
+              setStatus('done');
+              setHistoryOpen(false);
+            }}
+            onClear={clearHistory}
+            onClose={() => setHistoryOpen(false)}
+          />
+        )}
 
-              {/* ── Jessica photo panel ── */}
-              <div className="jessica-panel">
-                <img src="/jessica.png" alt="Jessica" className="jessica-hero-img" />
-                <div className="jessica-panel-overlay">
-                  <div className="jessica-panel-name">Jessica</div>
-                  <div className="jessica-panel-title">AI Document Analyst</div>
+        <main className="app-main">
+
+          {/* IDLE */}
+          {status === 'idle' && (
+            <div className="landing">
+              <div className="landing-split">
+                <div className="jessica-panel">
+                  <img src="/jessica.png" alt="Jessica" className="jessica-hero-img" />
+                  <div className="jessica-panel-overlay">
+                    <div className="jessica-panel-name">Jessica</div>
+                    <div className="jessica-panel-title">AI Document Analyst</div>
+                  </div>
                 </div>
-              </div>
-
-              {/* ── Right: intro + upload ── */}
-              <div className="landing-right">
-                <div className="landing-eyebrow"><span>✦</span> Powered by Claude AI</div>
-                <h1 className="landing-title">Any document.<br />Instant clarity.</h1>
-                <p className="landing-sub">
-                  Drop a file and Jessica reads it cover to cover — contracts, insurance policies,
-                  medical records, court filings, financial statements, anything. She'll tell you
-                  exactly what it is, who's involved, and what matters.
-                </p>
-
-                <UploadZone onFile={handleFile} />
-
-                <div className="supports-row">
-                  <span>Accepts:</span>
-                  {['PDF', 'CSV', 'XLSX', 'TXT', 'JSON', 'Markdown'].map(t => (
-                    <Badge key={t} label={t} color="gray" />
-                  ))}
-                </div>
-
-                <div className="example-chips">
-                  {[
-                    'Insurance Policy', 'Legal Contract', 'Bill of Rights',
-                    'Medical Record', 'Financial Statement', 'Court Ruling',
-                    'Loss Run Report', 'Tax Document',
-                  ].map(d => <span key={d} className="example-chip">{d}</span>)}
+                <div className="landing-right">
+                  <div className="landing-eyebrow"><span>✦</span> Powered by Claude AI</div>
+                  <h1 className="landing-title">Any document.<br />Instant clarity.</h1>
+                  <p className="landing-sub">
+                    Drop one or more files and Jessica reads them all — contracts, insurance policies,
+                    medical records, court filings, financial statements, anything. She'll tell you
+                    what each is, who's involved, and whether they're related.
+                  </p>
+                  <UploadZone onFiles={handleFiles} />
+                  <div className="supports-row">
+                    <span>Accepts:</span>
+                    {['PDF', 'CSV', 'XLSX', 'TXT', 'JSON', 'Markdown'].map(t => <Badge key={t} label={t} color="gray" />)}
+                  </div>
+                  <div className="example-chips">
+                    {['Insurance Policy', 'Legal Contract', 'Bill of Rights', 'Medical Record',
+                      'Financial Statement', 'Court Ruling', 'Loss Run Report', 'Tax Document']
+                      .map(d => <span key={d} className="example-chip">{d}</span>)}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* LOADING */}
-        {status === 'loading' && <LoadingSpinner fileName={currentFile?.name} />}
+          {/* LOADING */}
+          {status === 'loading' && <MultiLoadingView jobs={jobs} />}
 
-        {/* ERROR */}
-        {status === 'error' && (
-          <div className="error-page">
-            <div className="jessica-avatar large">J</div>
-            <h2>Something went wrong</h2>
-            <p className="error-msg">{error}</p>
-            <button className="btn btn-primary" onClick={reset}>Try Another File</button>
-          </div>
-        )}
-
-        {/* DONE */}
-        {status === 'done' && result && (
-          <div className="results-page">
-            <div className="results-upload-bar">
-              <UploadZone onFile={handleFile} compact />
+          {/* ERROR */}
+          {status === 'error' && (
+            <div className="error-page">
+              <img src="/jessica.png" alt="Jessica" className="jessica-avatar large" />
+              <h2>Something went wrong</h2>
+              <p className="error-msg">{error}</p>
+              <button className="btn btn-primary" onClick={reset}>Try Another File</button>
             </div>
-            <ResultsPanel result={result} meta={meta} />
-          </div>
-        )}
+          )}
 
-      </main>
+          {/* DONE */}
+          {status === 'done' && displayJobs.length > 0 && (
+            <div className="results-page">
+              <div className="results-upload-bar">
+                <UploadZone onFiles={handleFiles} compact />
+              </div>
+
+              <BatchSummaryPanel analysis={displayBatch} />
+              <UnrelatedNotice analysis={displayBatch} />
+
+              <ResultsTabs
+                jobs={displayJobs.filter(j => j.status === 'done')}
+                activeIdx={activeJobIdx}
+                onSelect={setActiveJobIdx}
+              />
+
+              {activeJob?.result
+                ? <ResultsPanel result={activeJob.result} meta={activeJob.meta} />
+                : activeJob?.error
+                ? <div className="error-page"><p className="error-msg">Failed: {activeJob.error}</p></div>
+                : null}
+            </div>
+          )}
+
+        </main>
+      </div>
 
       <footer className="app-footer">
-        Data Parse · Powered by Claude AI · Documents are processed securely and never stored
+        Data Parse · Powered by Claude AI · Documents are processed securely and never stored on our servers
       </footer>
     </div>
   );
