@@ -901,7 +901,7 @@ export default function App() {
       </div>
 
       <footer className="app-footer">
-        Data Parse · Powered by Claude AI · Documents are processed securely and never stored on our servers
+        JESSICA · Powered by Claude AI · Documents are processed securely and never stored on our servers
       </footer>
     </div>
   );
