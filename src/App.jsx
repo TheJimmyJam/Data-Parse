@@ -716,11 +716,9 @@ export default function App() {
       <header className="app-header">
         <div className="header-inner">
           <div className="logo" onClick={reset} style={{ cursor: 'pointer' }}>
-            <div className="logo-mark">◈</div>
-            <div>
-              <div className="logo-title">Data Parse</div>
-              <div className="logo-sub">Powered by Jessica, your AI document analyst</div>
-            </div>
+            <div className="logo-jessica">JESSICA</div>
+            <div className="logo-divider" />
+            <div className="logo-tagline">Any document.<br />Instant clarity.</div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {history.length > 0 && (

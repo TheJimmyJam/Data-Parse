@@ -184,18 +184,29 @@ body {
   gap: 12px;
 }
 
-.logo { display: flex; align-items: center; gap: 9px; cursor: default; }
-.logo-mark {
-  width: 28px; height: 28px;
-  background: linear-gradient(135deg, rgba(255,255,255,.22) 0%, rgba(255,255,255,.07) 100%);
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  backdrop-filter: blur(6px);
+.logo { display: flex; align-items: center; gap: 14px; cursor: default; }
+.logo-jessica {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #fff 0%, #c7d2fe 60%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
 }
-.logo-title { font-size: 15px; font-weight: 800; letter-spacing: -.4px; }
-.logo-sub   { font-size: 10px; opacity: .58; letter-spacing: .01em; }
+.logo-divider {
+  width: 1px; height: 32px;
+  background: rgba(255,255,255,.2);
+  flex-shrink: 0;
+}
+.logo-tagline {
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: .7;
+  letter-spacing: .01em;
+}
 
 /* ─── Buttons ──────────────────────────────────────────────────────────────── */
 .btn {
