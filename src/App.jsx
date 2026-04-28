@@ -17,6 +17,19 @@ function fileToBase64(file) {
     r.readAsDataURL(file);
   });
 }
+async function hashFile(file) {
+  const buffer = await file.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function findCachedJob(hash, history) {
+  for (const item of history) {
+    for (const job of (item.jobs || [])) {
+      if (job.fileHash && job.fileHash === hash) return job;
+    }
+  }
+  return null;
+}
 function isAccepted(file) {
   const ext = '.' + file.name.split('.').pop().toLowerCase();
   return ACCEPTED_EXTENSIONS.includes(ext) || file.type.includes('text') ||
@@ -352,6 +365,7 @@ function ResultsPanel({ result, meta }) {
           <div className="results-badges">
             {data.documentCategory && <Badge label={data.documentCategory} color={categoryColor} />}
             {data.confidence && <ConfidencePip level={data.confidence} />}
+            {meta?.fromCache && <Badge label="⚡ Loaded from history" color="teal" />}
             {meta?.truncated && <Badge label="Large file — first 60k chars analyzed" color="yellow" />}
           </div>
           {meta?.fileName && <div className="results-filename">📄 {meta.fileName}</div>}
@@ -589,6 +603,13 @@ export default function App() {
 
     const startJob = async (job, file) => {
       try {
+        // Check cache first — hash the file and look it up in history
+        const fileHash = await hashFile(file);
+        const cachedJob = findCachedJob(fileHash, history);
+        if (cachedJob) {
+          return { result: cachedJob.result, meta: { ...cachedJob.meta, fromCache: true }, fileHash };
+        }
+
         const fileContent = await fileToBase64(file);
         const isPDF = file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
 
@@ -618,7 +639,10 @@ export default function App() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bgBody),
           });
-          if (startRes.status === 202) return await pollJob(job.jobId);
+          if (startRes.status === 202) {
+            const pollResult = await pollJob(job.jobId);
+            return { ...pollResult, fileHash };
+          }
           const errText = await startRes.text();
           let errJson; try { errJson = JSON.parse(errText); } catch { errJson = {}; }
           throw new Error(errJson.error || `Failed to queue PDF (status ${startRes.status})`);
@@ -636,7 +660,7 @@ export default function App() {
           throw new Error(`Server error (${syncRes.status}) — please try again.`);
         }
         if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
-        return { result: json, meta: json.meta };
+        return { result: json, meta: json.meta, fileHash };
 
       } catch (err) {
         return { error: err.message };
@@ -669,10 +693,10 @@ export default function App() {
           const docType = outcome.result?.data?.documentType || null;
           const docCat = outcome.result?.data?.documentCategory || null;
           setJobs(prev => prev.map(j => j.id === job.id
-            ? { ...j, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat }
+            ? { ...j, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat, fileHash: outcome.fileHash }
             : j
           ));
-          return { ...job, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat };
+          return { ...job, status: 'done', result: outcome.result, meta: outcome.meta, documentType: docType, documentCategory: docCat, fileHash: outcome.fileHash };
         }
       })
     );
@@ -715,6 +739,7 @@ export default function App() {
           documentCategory: j.result?.data?.documentCategory || null,
           result: j.result,
           meta: j.meta,
+          fileHash: j.fileHash || null,
         })),
         batchAnalysis: batchResult,
       });
