@@ -484,7 +484,6 @@ export default function App() {
   const [error, setError] = useState('');
   const [currentFile, setCurrentFile] = useState(null);
   const handleFile = async (file) => {
-    // Body size guard — Netlify limit is ~6MB; base64 adds ~33%
     const MAX_BYTES = 4.5 * 1024 * 1024;
     if (file.size > MAX_BYTES) {
       setError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Please upload a file under 4.5 MB.`);
@@ -499,29 +498,62 @@ export default function App() {
 
     try {
       const fileContent = await fileToBase64(file);
+      const jobId = crypto.randomUUID();
 
-      const response = await fetch('/.netlify/functions/parse-document', {
+      // Kick off background function — returns 202 immediately
+      const startRes = await fetch('/.netlify/functions/parse-document-background', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
+        body: JSON.stringify({ jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
       });
 
-      // Read as text first — avoids cryptic browser JSON parse errors on non-JSON responses
-      const rawText = await response.text();
-      let json;
-      try {
-        json = JSON.parse(rawText);
-      } catch {
-        if (response.status === 413) throw new Error('File is too large for the server. Try a smaller file.');
-        if (response.status === 502 || response.status === 504) throw new Error('Request timed out. Try a shorter document.');
-        throw new Error(`Unexpected server response (${response.status}). Check that ANTHROPIC_API_KEY is set in Netlify environment variables.`);
+      if (startRes.status !== 202) {
+        // Background function unavailable — fall back to sync
+        const syncRes = await fetch('/.netlify/functions/parse-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
+        });
+        const rawText = await syncRes.text();
+        let json;
+        try { json = JSON.parse(rawText); } catch {
+          throw new Error(`Server error (${syncRes.status}). Check that ANTHROPIC_API_KEY is set in Netlify.`);
+        }
+        if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
+        setResult(json);
+        setMeta(json.meta);
+        setStatus('done');
+        return;
       }
 
-      if (!response.ok || !json.success) throw new Error(json.error || `Server error ${response.status}`);
+      // Poll Supabase for result
+      const poll = async (attempts = 0) => {
+        if (attempts > 90) { // 3 min max
+          setError('Jessica is taking too long. Please try again.');
+          setStatus('error');
+          return;
+        }
+        try {
+          const pollRes = await fetch(`/.netlify/functions/get-result?jobId=${jobId}`);
+          const data = await pollRes.json();
 
-      setResult(json);
-      setMeta(json.meta);
-      setStatus('done');
+          if (data.status === 'done') {
+            setResult({ success: true, data: data.result });
+            setMeta(data.meta);
+            setStatus('done');
+          } else if (data.status === 'error') {
+            setError(data.error || 'Processing failed.');
+            setStatus('error');
+          } else {
+            setTimeout(() => poll(attempts + 1), 2000);
+          }
+        } catch {
+          setTimeout(() => poll(attempts + 1), 3000);
+        }
+      };
+
+      setTimeout(() => poll(), 3000);
+
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
       setStatus('error');
