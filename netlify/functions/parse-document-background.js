@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-const Anthropic = require('@anthropic-ai/sdk');
+import Anthropic from '@anthropic-ai/sdk';
 
 async function sbSet(jobId, payload) {
   const url = process.env.SUPABASE_URL;
@@ -16,19 +15,7 @@ async function sbSet(jobId, payload) {
   });
 }
 
-function extractExcel(buffer) {
-  const XLSX = require('xlsx');
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  let text = '';
-  workbook.SheetNames.forEach((name) => {
-    text += `=== Sheet: ${name} ===\n`;
-    text += XLSX.utils.sheet_to_csv(workbook.Sheets[name]);
-    text += '\n\n';
-  });
-  return text;
-}
-
-exports.handler = async (event) => {
+export const handler = async (event) => {
   let jobId;
   try {
     const body = JSON.parse(event.body || '{}');
@@ -41,8 +28,6 @@ exports.handler = async (event) => {
 
     const lowerName = fileName.toLowerCase();
     const isPDF = lowerName.endsWith('.pdf') || fileType === 'application/pdf';
-    const isExcel = lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls') || lowerName.endsWith('.xlsm') ||
-      (fileType && (fileType.includes('spreadsheet') || fileType.includes('excel')));
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -69,7 +54,15 @@ Document filename: ${fileName}`;
       ];
     } else {
       const buffer = Buffer.from(fileContent, 'base64');
-      const textContent = isExcel ? extractExcel(buffer) : buffer.toString('utf-8');
+      let textContent = buffer.toString('utf-8');
+
+      // Excel handling
+      if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls') || lowerName.endsWith('.xlsm')) {
+        const { read, utils } = await import('xlsx');
+        const workbook = read(buffer, { type: 'buffer' });
+        textContent = workbook.SheetNames.map(n => `=== ${n} ===\n${utils.sheet_to_csv(workbook.Sheets[n])}`).join('\n\n');
+      }
+
       if (!textContent?.trim()) {
         await sbSet(jobId, { status: 'error', error: 'Could not extract text from file.' });
         return;
