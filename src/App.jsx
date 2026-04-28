@@ -244,10 +244,52 @@ function CustomFields({ data }) {
 function ResultsPanel({ result, meta }) {
   const { data } = result;
   const [showRaw, setShowRaw] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handleCopyJSON = () => {
     navigator.clipboard.writeText(JSON.stringify(data, null, 2));
     alert('JSON copied to clipboard!');
+  };
+
+  const loadScript = (src) => new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+
+      const panel = document.querySelector('.results-panel');
+      const canvas = await window.html2canvas(panel, { scale: 2, useCORS: true, logging: false });
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      const imgData = canvas.toDataURL('image/png');
+
+      pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH);
+      let remaining = imgH - pageH;
+      while (remaining > 0) {
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, -(imgH - remaining), imgW, imgH);
+        remaining -= pageH;
+      }
+
+      const fileName = (data.documentType || 'document').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      pdf.save(`${fileName}-jessica-analysis.pdf`);
+    } catch (err) {
+      alert('PDF export failed: ' + err.message);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const categoryColor = {
@@ -274,6 +316,9 @@ function ResultsPanel({ result, meta }) {
         <div className="results-actions">
           <button className="btn btn-ghost-white" onClick={handleCopyJSON}>Copy JSON</button>
           <button className="btn btn-ghost-white" onClick={() => window.print()}>Print</button>
+          <button className="btn btn-ghost-white" onClick={handleExportPDF} disabled={exporting}>
+            {exporting ? 'Exporting…' : 'Export PDF'}
+          </button>
         </div>
       </div>
 
