@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import './App.css';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const ACCEPTED_EXTENSIONS = ['.pdf', '.csv', '.xlsx', '.xls', '.txt', '.json', '.tsv', '.md'];
+const ACCEPTED_EXTENSIONS = ['.pdf', '.docx', '.doc', '.csv', '.xlsx', '.xls', '.txt', '.json', '.tsv', '.md'];
 const MAX_BYTES = 4.5 * 1024 * 1024;
 const MAX_FILES = 8;
 
@@ -31,7 +31,8 @@ function findCachedJob(hash, history) {
 function isAccepted(file) {
   const ext = '.' + file.name.split('.').pop().toLowerCase();
   return ACCEPTED_EXTENSIONS.includes(ext) || file.type.includes('text') ||
-    file.type === 'application/pdf' || file.type.includes('spreadsheet') || file.type.includes('excel');
+    file.type === 'application/pdf' || file.type.includes('spreadsheet') || file.type.includes('excel') ||
+    file.type.includes('wordprocessingml') || file.type === 'application/msword';
 }
 function fmt(val) {
   if (val === null || val === undefined || val === '') return null;
@@ -482,7 +483,7 @@ function UploadZone({ onFiles, compact = false }) {
         ref={inputRef}
         type="file"
         multiple
-        accept=".pdf,.csv,.xlsx,.xls,.txt,.json,.tsv,.md"
+        accept=".pdf,.docx,.doc,.csv,.xlsx,.xls,.txt,.json,.tsv,.md"
         onChange={(e) => { const f = Array.from(e.target.files).filter(isAccepted); if (f.length) onFiles(f); e.target.value = ''; }}
         style={{ display: 'none' }}
       />
@@ -501,7 +502,7 @@ function UploadZone({ onFiles, compact = false }) {
             </svg>
           </div>
           <div className="upload-text">Drop one or more files, or click to browse</div>
-          <div className="upload-sub">PDF · CSV · XLSX · TXT · JSON · Markdown &nbsp;·&nbsp; Up to {MAX_FILES} files at once</div>
+          <div className="upload-sub">PDF · DOCX · CSV · XLSX · TXT · JSON · Markdown &nbsp;·&nbsp; Up to {MAX_FILES} files at once</div>
         </>
       )}
     </div>
@@ -850,7 +851,7 @@ export default function App() {
                   <UploadZone onFiles={handleFiles} />
                   <div className="supports-row">
                     <span>Accepts:</span>
-                    {['PDF', 'CSV', 'XLSX', 'TXT', 'JSON', 'Markdown'].map(t => <Badge key={t} label={t} color="gray" />)}
+                    {['PDF', 'DOCX', 'CSV', 'XLSX', 'TXT', 'JSON', 'Markdown'].map(t => <Badge key={t} label={t} color="gray" />)}
                   </div>
                   <div className="example-chips">
                     {['Insurance Policy', 'Legal Contract', 'Bill of Rights', 'Medical Record',

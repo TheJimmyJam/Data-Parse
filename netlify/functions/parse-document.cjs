@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const Anthropic = require('@anthropic-ai/sdk');
+const mammoth = require('mammoth');
+
+// ─── Word / DOCX Parser ───────────────────────────────────────────────────────
+async function extractDocx(buffer) {
+  const result = await mammoth.extractRawText({ buffer });
+  return result.value || '';
+}
 
 // ─── Excel / XLSX Parser ──────────────────────────────────────────────────────
 function extractExcel(buffer) {
@@ -127,6 +134,8 @@ Document filename: ${fileName}`;
     const isPDF = lowerName.endsWith('.pdf') || fileType === 'application/pdf';
     const isExcel = lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls') || lowerName.endsWith('.xlsm') ||
       (fileType && (fileType.includes('spreadsheet') || fileType.includes('excel')));
+    const isDocx = lowerName.endsWith('.docx') || lowerName.endsWith('.doc') ||
+      (fileType && fileType.includes('wordprocessingml'));
 
     let messageContent;
 
@@ -147,11 +156,13 @@ Document filename: ${fileName}`;
         },
       ];
     } else {
-      // Extract text from Excel, CSV, TXT, JSON, etc.
+      // Extract text from DOCX, Excel, CSV, TXT, JSON, etc.
       const buffer = Buffer.from(fileContent, 'base64');
       let textContent = '';
 
-      if (isExcel) {
+      if (isDocx) {
+        textContent = await extractDocx(buffer);
+      } else if (isExcel) {
         textContent = extractExcel(buffer);
       } else {
         textContent = buffer.toString('utf-8');
@@ -211,7 +222,7 @@ Document filename: ${fileName}`;
         meta: {
           fileName,
           fileType,
-          method: isPDF ? 'native-pdf' : 'text-extraction',
+          method: isPDF ? 'native-pdf' : isDocx ? 'docx-extraction' : 'text-extraction',
         },
       }),
     };
