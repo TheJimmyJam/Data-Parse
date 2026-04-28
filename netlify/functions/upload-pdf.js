@@ -1,5 +1,5 @@
-// Receives PDF base64 from frontend, uploads to Supabase Storage, returns storagePath
-// This is a sync function so it runs quickly — just a file upload, not Claude processing
+// Uploads PDF to Supabase Storage so it never hits Netlify's body size limit.
+// Auto-creates the bucket if it doesn't exist.
 
 const HEADERS = {
   'Content-Type': 'application/json',
@@ -18,25 +18,29 @@ export const handler = async (event) => {
       return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Missing fileContent, fileName, or jobId' }) };
     }
 
+    const SB_URL = process.env.SUPABASE_URL;
+    const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const sbHeaders = { Authorization: `Bearer ${SB_KEY}`, apikey: SB_KEY };
+
+    // Auto-create bucket if needed (fails silently if already exists)
+    await fetch(`${SB_URL}/storage/v1/bucket`, {
+      method: 'POST',
+      headers: { ...sbHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 'pdf-uploads', name: 'pdf-uploads', public: false }),
+    });
+
     const buffer = Buffer.from(fileContent, 'base64');
-    const storagePath = `${jobId}/${fileName}`;
+    const storagePath = `${jobId}/${encodeURIComponent(fileName)}`;
 
-    const res = await fetch(
-      `${process.env.SUPABASE_URL}/storage/v1/object/pdf-uploads/${storagePath}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-          apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-          'Content-Type': 'application/pdf',
-        },
-        body: buffer,
-      }
-    );
+    const uploadRes = await fetch(`${SB_URL}/storage/v1/object/pdf-uploads/${storagePath}`, {
+      method: 'POST',
+      headers: { ...sbHeaders, 'Content-Type': 'application/pdf', 'x-upsert': 'true' },
+      body: buffer,
+    });
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Storage upload failed (${res.status}): ${text}`);
+    if (!uploadRes.ok) {
+      const text = await uploadRes.text();
+      throw new Error(`Storage upload failed (${uploadRes.status}): ${text}`);
     }
 
     return { statusCode: 200, headers: HEADERS, body: JSON.stringify({ storagePath }) };

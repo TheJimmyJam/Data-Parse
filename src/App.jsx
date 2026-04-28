@@ -585,7 +585,7 @@ export default function App() {
     //   Large PDFs (>3MB base64) are uploaded to Supabase Storage first to avoid Netlify's 6MB body limit
     //   Small PDFs are sent inline
     // Non-PDFs → sync function (fast, always under 26s)
-    const INLINE_LIMIT = 3 * 1024 * 1024; // 3MB base64
+    const INLINE_LIMIT = 400 * 1024; // 400KB base64 — anything larger goes through Supabase Storage to avoid Netlify body limits
 
     const startJob = async (job, file) => {
       try {
