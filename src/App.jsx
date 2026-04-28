@@ -4,8 +4,6 @@ import './App.css';
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ACCEPTED_EXTENSIONS = ['.pdf', '.csv', '.xlsx', '.xls', '.txt', '.json', '.tsv', '.md'];
 const MAX_BYTES = 4.5 * 1024 * 1024;
-const HISTORY_KEY = 'dp_history';
-const MAX_HISTORY = 40;
 const MAX_FILES = 8;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,12 +47,27 @@ function timeAgo(iso) {
   return `${Math.floor(secs / 86400)}d ago`;
 }
 
-// ─── LocalStorage history ─────────────────────────────────────────────────────
-function loadHistory() {
-  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; }
+// ─── Supabase history API ─────────────────────────────────────────────────────
+async function fetchHistory() {
+  try {
+    const res = await fetch('/.netlify/functions/history');
+    if (!res.ok) return [];
+    return await res.json();
+  } catch { return []; }
 }
-function saveHistory(items) {
-  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, MAX_HISTORY))); } catch {}
+async function saveHistoryEntry(entry) {
+  try {
+    await fetch('/.netlify/functions/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+  } catch {}
+}
+async function deleteAllHistory() {
+  try {
+    await fetch('/.netlify/functions/history', { method: 'DELETE' });
+  } catch {}
 }
 
 // ─── Badges / UI atoms ───────────────────────────────────────────────────────
@@ -553,17 +566,29 @@ export default function App() {
   const [batchAnalysis, setBatchAnalysis] = useState(null);
   const [activeJobIdx, setActiveJobIdx] = useState(0);
   const [error, setError] = useState('');
-  const [history, setHistory] = useState(loadHistory);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [viewingItem, setViewingItem] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const pushHistory = (entry) => {
-    const updated = [entry, ...history].slice(0, MAX_HISTORY);
-    setHistory(updated);
-    saveHistory(updated);
+  // Load history from Supabase on mount
+  useEffect(() => {
+    fetchHistory().then(h => {
+      setHistory(h);
+      setHistoryLoading(false);
+    });
+  }, []);
+
+  const pushHistory = async (entry) => {
+    setHistory(prev => [entry, ...prev]);
+    await saveHistoryEntry(entry);
   };
 
-  const clearHistory = () => { setHistory([]); saveHistory([]); setViewingItem(null); };
+  const clearHistory = async () => {
+    setHistory([]);
+    setViewingItem(null);
+    await deleteAllHistory();
+  };
 
   const handleFiles = async (fileList) => {
     const files = fileList.slice(0, MAX_FILES);
@@ -728,7 +753,7 @@ export default function App() {
 
     // Save to history
     if (successfulJobs.length > 0) {
-      pushHistory({
+      await pushHistory({
         id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         jobs: successfulJobs.map(j => ({
@@ -769,9 +794,9 @@ export default function App() {
             <div className="logo-tagline">Any document.<br />Instant clarity.</div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {history.length > 0 && (
-              <button className="btn btn-outline" onClick={() => setHistoryOpen(o => !o)}>
-                📁 History ({history.length})
+            {(historyLoading || history.length > 0) && (
+              <button className="btn btn-outline" onClick={() => setHistoryOpen(o => !o)} disabled={historyLoading}>
+                {historyLoading ? '📁 Loading…' : `📁 History (${history.length})`}
               </button>
             )}
             {status !== 'idle' && (
