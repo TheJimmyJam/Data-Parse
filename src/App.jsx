@@ -585,36 +585,38 @@ export default function App() {
       try {
         const fileContent = await fileToBase64(file);
 
-        // Try background function first
-        const startRes = await fetch('/.netlify/functions/parse-document-background', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jobId: job.jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
-        });
+        // Files under 2MB base64 → background function (async, no timeout issues)
+        // Files over 2MB → sync function with extended timeout
+        const useBackground = fileContent.length < 2 * 1024 * 1024;
 
-        if (startRes.status === 202) {
-          // Poll for this job
-          return await pollJob(job.jobId);
-        } else {
-          // Fallback to sync
-          const syncRes = await fetch('/.netlify/functions/parse-document', {
+        if (useBackground) {
+          const startRes = await fetch('/.netlify/functions/parse-document-background', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
+            body: JSON.stringify({ jobId: job.jobId, fileContent, fileName: file.name, fileType: file.type || '' }),
           });
-          const text = await syncRes.text();
-          let json;
-          try {
-            json = JSON.parse(text);
-          } catch {
-            if (syncRes.status === 502 || syncRes.status === 504 || syncRes.status === 524) {
-              throw new Error('Request timed out. The document may be too large for direct processing — make sure the Supabase parse_jobs table is created so background processing works for large files.');
-            }
-            throw new Error(`Server returned an unexpected response (${syncRes.status}). The document may be too large — check that your Supabase parse_jobs table exists.`);
+
+          if (startRes.status === 202) {
+            return await pollJob(job.jobId);
           }
-          if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
-          return { result: json, meta: json.meta };
         }
+
+        // Sync fallback (larger files or if background unavailable)
+        const syncRes = await fetch('/.netlify/functions/parse-document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileContent, fileName: file.name, fileType: file.type || '' }),
+        });
+        const text = await syncRes.text();
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch {
+          throw new Error(`Server error (${syncRes.status}) — the document may have taken too long to process. Try a smaller file.`);
+        }
+        if (!syncRes.ok || !json.success) throw new Error(json.error || `Server error ${syncRes.status}`);
+        return { result: json, meta: json.meta };
+
       } catch (err) {
         return { error: err.message };
       }
