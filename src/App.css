@@ -727,15 +727,385 @@ td.amount { font-weight: 700; color: var(--green); }
 }
 
 /* ─── Responsive ───────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
-  .app-main { padding: 12px; }
-  .landing-title { font-size: 20px; }
-  .jessica-intro { flex-direction: column; }
+
+/* Tablet & smaller — collapse split layout, shrink header, scrolling tabs */
+@media (max-width: 900px) {
+  .app-main { padding: 14px 16px; }
+
+  /* Header */
+  .app-header { padding: 0 14px; }
+  .header-inner { height: 52px; gap: 8px; }
+  .logo { gap: 10px; }
+  .logo-jessica { font-size: 22px; letter-spacing: .08em; }
+  .logo-divider { height: 26px; }
+  .logo-tagline { font-size: 10px; }
+
+  /* Landing split → stacked */
+  .landing-split {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .jessica-panel { max-width: 460px; margin: 0 auto; }
+  .jessica-hero-img { max-height: 360px; }
+  .landing-right { padding-top: 0; }
+  .landing-title { font-size: 26px; letter-spacing: -.6px; }
+  .landing-sub { font-size: 13px; max-width: 100%; }
+
+  /* History panel becomes full-screen overlay */
+  .history-panel {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 86%;
+    max-width: 320px;
+    z-index: 200;
+    box-shadow: 4px 0 24px rgba(0,0,0,.25);
+  }
+  .app-body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: rgba(15,12,60,.45);
+    z-index: 150;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+  }
+  .app-body:has(.history-panel)::after {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Results header stacks; actions wrap to full row */
+  .results-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
+    gap: 10px;
+  }
+  .results-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .results-actions .btn { flex: 1 1 auto; justify-content: center; min-width: 0; }
+
+  /* Tabs scroll horizontally instead of wrapping */
+  .results-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -16px 12px;
+    padding: 0 16px 4px;
+    scrollbar-width: none;
+  }
+  .results-tabs::-webkit-scrollbar { display: none; }
+  .results-tab { flex-shrink: 0; max-width: 220px; }
+
+  /* Grid → single column */
   .results-grid { grid-template-columns: 1fr; }
+  .section { border-right: none; padding: 14px 16px; }
   .section-cards { grid-template-columns: 1fr; }
-  .section { border-right: none; }
-  .results-header { flex-direction: column; padding: 14px 16px; }
-  .section { padding: 12px 14px; }
+  .custom-fields { grid-template-columns: 1fr; }
+
+  /* Batch summary */
+  .batch-summary { padding: 16px 18px; }
+  .batch-summary-group { font-size: 17px; }
+
+  /* Ask Jessica */
+  .ask-jessica { padding: 18px 16px; border-radius: 12px; }
+  .ask-messages { max-height: 60vh; }
+  .ask-bubble { max-width: 88%; font-size: 13.5px; }
+
+  /* Tables — let them scroll horizontally inside their wrapper */
+  .table-wrap { -webkit-overflow-scrolling: touch; }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  body { font-size: 13px; }
+  .app-main { padding: 12px 12px 20px; }
+
+  /* Header — give the buttons priority over the tagline */
+  .header-inner { height: 56px; }
+  .logo-tagline { display: none; }
+  .logo-jessica { font-size: 20px; }
+  .logo-divider { display: none; }
+  .btn { padding: 8px 12px; font-size: 12px; }
+  .btn-sm { padding: 6px 10px; font-size: 11px; }
+
+  /* Landing */
+  .landing { padding: 4px 0 16px; }
+  .landing-title { font-size: 22px; line-height: 1.15; }
+  .landing-sub { font-size: 12.5px; line-height: 1.6; }
+  .jessica-hero-img { max-height: 280px; }
+  .jessica-panel-name { font-size: 18px; }
+  .jessica-panel-title { font-size: 10px; }
+
+  /* Upload zone — bigger tap area, larger text */
+  .upload-zone { padding: 22px 14px; }
+  .upload-icon-wrap { width: 48px; height: 48px; }
+  .upload-text { font-size: 14px; }
+  .upload-sub { font-size: 11px; }
+  .upload-zone.compact { padding: 12px 14px; }
+
+  /* Results header */
+  .results-doc-type { font-size: 15px; }
+  .results-filename {
+    overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; max-width: 100%;
+  }
+
+  /* Summary + flags padding */
+  .summary-box { padding: 12px 16px; gap: 10px; }
+  .summary-text { font-size: 12.5px; }
+  .summary-avatar { width: 44px; height: 44px; }
+  .flags-box { padding: 12px 16px; }
+
+  /* Results tabs sized down */
+  .results-tab { padding: 7px 12px; }
+  .results-tab-name { font-size: 11.5px; }
+
+  /* Batch summary */
+  .batch-summary { padding: 14px 16px; margin-bottom: 12px; }
+  .batch-summary-header { gap: 10px; margin-bottom: 10px; }
+  .batch-summary-group { font-size: 16px; }
+  .batch-summary-text { font-size: 12.5px; line-height: 1.6; }
+  .batch-insights li { font-size: 11.5px; }
+
+  /* Tables a bit denser */
+  table { font-size: 12px; }
+  th { padding: 6px 9px; font-size: 9.5px; }
+  td { padding: 7px 9px; }
+
+  /* Ask Jessica */
+  .ask-jessica { padding: 16px 14px; margin-top: 18px; }
+  .ask-jessica-header { gap: 10px; margin-bottom: 14px; }
+  .ask-jessica-title { font-size: 14px; }
+  .ask-suggestions { gap: 6px; margin-bottom: 14px; }
+  .ask-suggestion-chip { font-size: 11.5px; padding: 6px 10px; }
+  .ask-input { font-size: 14px; padding: 10px 12px; }
+  .ask-send-btn { width: 42px; height: 42px; }
+  .ask-bubble { max-width: 90%; padding: 10px 13px; font-size: 13.5px; }
+  .ask-avatar { width: 26px; height: 26px; }
+  .ask-hint { font-size: 10.5px; }
+
+  /* History panel — narrower trigger area, larger items */
+  .history-panel { width: 92%; }
+  .history-item { padding: 11px 12px; }
+
+  /* Multi-job loading list — fit within viewport */
+  .multi-job-list {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 12px 14px;
+  }
+
+  /* Raw JSON readable */
+  .raw-json { font-size: 10.5px; padding: 12px; }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+  .header-inner { gap: 6px; }
+  .logo-jessica { font-size: 18px; }
+  .btn { padding: 7px 10px; font-size: 11.5px; }
+  .landing-title { font-size: 20px; }
+  .results-doc-type { font-size: 14px; }
+  .ask-bubble { max-width: 92%; }
+}
+
+/* ─── Ask Jessica ──────────────────────────────────────────────────────────── */
+.ask-jessica {
+  background: #0f0e1a;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.ask-jessica-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ask-jessica-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #a5b4fc;
+  letter-spacing: 0.02em;
+}
+
+.ask-jessica-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* Suggestion chips shown before first message */
+.ask-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ask-suggestion-chip {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+  line-height: 1.4;
+}
+.ask-suggestion-chip:hover {
+  background: rgba(99, 102, 241, 0.22);
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+/* Conversation messages */
+.ask-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.ask-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ask-message-user {
+  flex-direction: row-reverse;
+}
+
+.ask-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ask-bubble {
+  max-width: 82%;
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #e2e8f0;
+}
+
+.ask-bubble p {
+  margin: 0 0 6px;
+}
+.ask-bubble p:last-child { margin-bottom: 0; }
+
+.ask-message-assistant .ask-bubble {
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-top-left-radius: 4px;
+}
+
+.ask-message-user .ask-bubble {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-top-right-radius: 4px;
+  color: #cbd5e1;
+}
+
+/* Typing dots loading bubble */
+.ask-bubble-loading {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 14px 18px;
+}
+.ask-bubble-loading span {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6366f1;
+  animation: ask-dot-bounce 1.2s ease-in-out infinite;
+}
+.ask-bubble-loading span:nth-child(2) { animation-delay: 0.2s; }
+.ask-bubble-loading span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ask-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.ask-error {
+  font-size: 13px;
+  color: #f87171;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Input row */
+.ask-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.ask-input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 12px;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 10px 14px;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.ask-input:focus {
+  border-color: rgba(99, 102, 241, 0.6);
+}
+.ask-input::placeholder { color: #4b5563; }
+.ask-input:disabled { opacity: 0.5; }
+
+.ask-send-btn {
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, opacity 0.15s;
+  padding: 0;
+}
+.ask-send-btn:hover:not(:disabled) { background: #4f46e5; }
+.ask-send-btn:disabled { opacity: 0.4; cursor: default; }
+
+.ask-hint {
+  font-size: 11px;
+  color: #374151;
+  margin-top: 6px;
+  text-align: right;
 }
 
 /* ─── Ask Jessica ──────────────────────────────────────────────────────────── */
