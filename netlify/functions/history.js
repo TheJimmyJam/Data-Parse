@@ -21,7 +21,7 @@ export const handler = async (event) => {
     // ── GET: load all history, newest first ──────────────────────────────
     if (event.httpMethod === 'GET') {
       const res = await fetch(
-        `${SB_URL}/rest/v1/document_history?order=timestamp.desc&limit=40`,
+        `${SB_URL}/rest/v1/document_history?order=timestamp.desc&limit=200`,
         { headers: sbHeaders() }
       );
       if (!res.ok) throw new Error(`Supabase read failed (${res.status})`);
