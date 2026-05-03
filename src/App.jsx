@@ -272,9 +272,9 @@ function BatchSummaryPanel({ analysis }) {
   return (
     <div className="batch-summary">
       <div className="batch-summary-header">
-        <img src="/jessica.png" alt="Jessica" className="summary-avatar" />
+        <img src="/megi.png" alt="Megi" className="summary-avatar" />
         <div>
-          <div className="batch-summary-label">✦ Jessica's Combined Analysis</div>
+          <div className="batch-summary-label">✦ Megi's Combined Analysis</div>
           <div className="batch-summary-group">{analysis.groupName}</div>
         </div>
       </div>
@@ -319,8 +319,8 @@ function ResultsTabs({ jobs, activeIdx, onSelect }) {
   );
 }
 
-// ─── Ask Jessica Chat ─────────────────────────────────────────────────────────
-function AskJessica({ documentData, fileName }) {
+// ─── Ask Megi Chat ─────────────────────────────────────────────────────────
+function AskMegi({ documentData, fileName }) {
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversation, setConversation] = useState([]); // [{role, content}]
@@ -353,7 +353,7 @@ function AskJessica({ documentData, fileName }) {
     setConversation(prev => [...prev, { role: 'user', content: trimmed }]);
 
     try {
-      const res = await fetch('/.netlify/functions/ask-jessica', {
+      const res = await fetch('/.netlify/functions/ask-megi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -379,12 +379,12 @@ function AskJessica({ documentData, fileName }) {
   };
 
   return (
-    <div className="ask-jessica">
-      <div className="ask-jessica-header">
-        <img src="/jessica.png" alt="Jessica" className="summary-avatar" />
+    <div className="ask-megi">
+      <div className="ask-megi-header">
+        <img src="/megi.png" alt="Megi" className="summary-avatar" />
         <div>
-          <div className="ask-jessica-title">✦ Ask Jessica</div>
-          <div className="ask-jessica-sub">Follow-up questions about this document</div>
+          <div className="ask-megi-title">✦ Ask Megi</div>
+          <div className="ask-megi-sub">Follow-up questions about this document</div>
         </div>
       </div>
 
@@ -401,7 +401,7 @@ function AskJessica({ documentData, fileName }) {
           {conversation.map((msg, i) => (
             <div key={i} className={`ask-message ask-message-${msg.role}`}>
               {msg.role === 'assistant' && (
-                <img src="/jessica.png" alt="Jessica" className="ask-avatar" />
+                <img src="/megi.png" alt="Megi" className="ask-avatar" />
               )}
               <div className="ask-bubble">
                 {msg.content.split('\n').map((line, j) => (
@@ -412,7 +412,7 @@ function AskJessica({ documentData, fileName }) {
           ))}
           {loading && (
             <div className="ask-message ask-message-assistant">
-              <img src="/jessica.png" alt="Jessica" className="ask-avatar" />
+              <img src="/megi.png" alt="Megi" className="ask-avatar" />
               <div className="ask-bubble ask-bubble-loading">
                 <span /><span /><span />
               </div>
@@ -426,7 +426,7 @@ function AskJessica({ documentData, fileName }) {
       <div className="ask-input-row">
         <textarea
           className="ask-input"
-          placeholder="Ask Jessica anything about this document…"
+          placeholder="Ask Megi anything about this document…"
           value={question}
           onChange={e => setQuestion(e.target.value)}
           onKeyDown={handleKey}
@@ -486,7 +486,7 @@ function ResultsPanel({ result, meta }) {
         remaining -= pageH;
       }
       const fileName = (data.documentType || 'document').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-      pdf.save(`${fileName}-jessica-analysis.pdf`);
+      pdf.save(`${fileName}-megi-analysis.pdf`);
     } catch (err) { alert('PDF export failed: ' + err.message); }
     finally { setExporting(false); }
   };
@@ -501,7 +501,7 @@ function ResultsPanel({ result, meta }) {
     <div className="results-panel">
       <div className="results-header">
         <div className="results-header-left">
-          <div className="jessica-tag">✦ Analyzed by Jessica</div>
+          <div className="megi-tag">✦ Analyzed by Megi</div>
           <div className="results-doc-type">{data.documentType || 'Document'}</div>
           <div className="results-badges">
             {data.documentCategory && <Badge label={data.documentCategory} color={categoryColor} />}
@@ -522,9 +522,9 @@ function ResultsPanel({ result, meta }) {
 
       {data.summary && (
         <div className="summary-box">
-          <img src="/jessica.png" alt="Jessica" className="summary-avatar" />
+          <img src="/megi.png" alt="Megi" className="summary-avatar" />
           <div>
-            <div className="summary-label">Jessica's Summary</div>
+            <div className="summary-label">Megi's Summary</div>
             <p className="summary-text">{data.summary}</p>
           </div>
         </div>
@@ -638,7 +638,7 @@ function UploadZone({ onFiles, compact = false }) {
 
 // ─── Loading ──────────────────────────────────────────────────────────────────
 const LOADING_MESSAGES = [
-  "Jessica is reviewing your document…",
+  "Megi is reviewing your document…",
   "She's blonde, so bear with her…",
   "Wow, this is a lot of words…",
   "Skipping to the fun parts…",
@@ -649,7 +649,7 @@ const LOADING_MESSAGES = [
   "Your document is very boring, just so you know…",
   "Almost done — or at least pretending to be…",
   "Cross-referencing with her horoscope…",
-  "Asking the other Jessicas for a second opinion…",
+  "Asking the other Megis for a second opinion…",
   "This is taking a while… it must be a legal document…",
   "Found something interesting — nevermind, it's a typo…",
   "Pulling the important stuff to the top so you look smart…",
@@ -668,7 +668,7 @@ function MultiLoadingView({ jobs }) {
 
   return (
     <div className="loading-page">
-      <img src="/jessica.png" alt="Jessica" className="jessica-avatar loading-avatar" />
+      <img src="/megi.png" alt="Megi" className="megi-avatar loading-avatar" />
       <div className="loading-progress-label">{done < total ? `${done} of ${total} complete` : 'Comparing documents…'}</div>
       <div className="multi-job-list">
         {jobs.map(job => (
@@ -919,7 +919,7 @@ export default function App() {
       <header className="app-header">
         <div className="header-inner">
           <div className="logo" onClick={reset} style={{ cursor: 'pointer' }}>
-            <div className="logo-jessica">JESSICA</div>
+            <div className="logo-megi">MEGI</div>
             <div className="logo-divider" />
             <div className="logo-tagline">Any document.<br />Instant clarity.</div>
           </div>
@@ -960,18 +960,18 @@ export default function App() {
           {status === 'idle' && (
             <div className="landing">
               <div className="landing-split">
-                <div className="jessica-panel">
-                  <img src="/jessica.png" alt="Jessica" className="jessica-hero-img" />
-                  <div className="jessica-panel-overlay">
-                    <div className="jessica-panel-name">Jessica</div>
-                    <div className="jessica-panel-title">AI Document Analyst</div>
+                <div className="megi-panel">
+                  <img src="/megi.png" alt="Megi" className="megi-hero-img" />
+                  <div className="megi-panel-overlay">
+                    <div className="megi-panel-name">Megi</div>
+                    <div className="megi-panel-title">AI Document Analyst</div>
                   </div>
                 </div>
                 <div className="landing-right">
                   <div className="landing-eyebrow"><span>✦</span> Powered by Claude AI</div>
                   <h1 className="landing-title">Any document.<br />Instant clarity.</h1>
                   <p className="landing-sub">
-                    Drop one or more files and Jessica reads them all — contracts, insurance policies,
+                    Drop one or more files and Megi reads them all — contracts, insurance policies,
                     medical records, court filings, financial statements, anything. She'll tell you
                     what each is, who's involved, and whether they're related.
                   </p>
@@ -996,7 +996,7 @@ export default function App() {
           {/* ERROR */}
           {status === 'error' && (
             <div className="error-page">
-              <img src="/jessica.png" alt="Jessica" className="jessica-avatar large" />
+              <img src="/megi.png" alt="Megi" className="megi-avatar large" />
               <h2>Something went wrong</h2>
               <p className="error-msg">{error}</p>
               <button className="btn btn-primary" onClick={reset}>Try Another File</button>
@@ -1022,7 +1022,7 @@ export default function App() {
               {activeJob?.result
                 ? <>
                     <ResultsPanel result={activeJob.result} meta={activeJob.meta} />
-                    <AskJessica
+                    <AskMegi
                       documentData={activeJob.result.data}
                       fileName={activeJob.meta?.fileName || activeJob.fileName}
                     />
