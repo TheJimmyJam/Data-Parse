@@ -241,7 +241,7 @@ body {
 .badge-slate   { background: #f1f5f9;            color: #475569; }
 .badge-gray    { background: var(--gray-lt);    color: var(--gray); }
 
-/* ─── Jessica Avatar ───────────────────────────────────────────────────────── */
+/* ─── Megi Avatar ───────────────────────────────────────────────────────── */
 .megi-avatar {
   width: 48px; height: 48px; border-radius: 50%;
   object-fit: cover; object-position: top center;
@@ -288,7 +288,7 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Split layout: Jessica photo | Upload side ── */
+/* ── Split layout: Megi photo | Upload side ── */
 .landing-split {
   display: grid;
   grid-template-columns: 340px 1fr;
@@ -296,7 +296,7 @@ body {
   align-items: start;
 }
 
-/* ── Jessica photo panel ── */
+/* ── Megi photo panel ── */
 .megi-panel {
   position: relative;
   border-radius: 18px;
@@ -809,7 +809,7 @@ td.amount { font-weight: 700; color: var(--green); }
   .batch-summary { padding: 16px 18px; }
   .batch-summary-group { font-size: 17px; }
 
-  /* Ask Jessica */
+  /* Ask Megi */
   .ask-megi { padding: 18px 16px; border-radius: 12px; }
   .ask-messages { max-height: 60vh; }
   .ask-bubble { max-width: 88%; font-size: 13.5px; }
@@ -875,7 +875,7 @@ td.amount { font-weight: 700; color: var(--green); }
   th { padding: 6px 9px; font-size: 9.5px; }
   td { padding: 7px 9px; }
 
-  /* Ask Jessica */
+  /* Ask Megi */
   .ask-megi { padding: 16px 14px; margin-top: 18px; }
   .ask-megi-header { gap: 10px; margin-bottom: 14px; }
   .ask-megi-title { font-size: 14px; }
@@ -913,7 +913,7 @@ td.amount { font-weight: 700; color: var(--green); }
   .ask-bubble { max-width: 92%; }
 }
 
-/* ─── Ask Jessica ──────────────────────────────────────────────────────────── */
+/* ─── Ask Megi ──────────────────────────────────────────────────────────── */
 .ask-megi {
   background: #0f0e1a;
   border: 1px solid rgba(99, 102, 241, 0.25);
@@ -1108,7 +1108,7 @@ td.amount { font-weight: 700; color: var(--green); }
   text-align: right;
 }
 
-/* ─── Ask Jessica ──────────────────────────────────────────────────────────── */
+/* ─── Ask Megi ──────────────────────────────────────────────────────────── */
 .ask-megi {
   background: #0f0e1a;
   border: 1px solid rgba(99, 102, 241, 0.25);
