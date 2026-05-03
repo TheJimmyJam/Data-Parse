@@ -185,7 +185,7 @@ body {
 }
 
 .logo { display: flex; align-items: center; gap: 14px; cursor: default; }
-.logo-jessica {
+.logo-megi {
   font-size: 28px;
   font-weight: 900;
   letter-spacing: .12em;
@@ -242,15 +242,15 @@ body {
 .badge-gray    { background: var(--gray-lt);    color: var(--gray); }
 
 /* ─── Jessica Avatar ───────────────────────────────────────────────────────── */
-.jessica-avatar {
+.megi-avatar {
   width: 48px; height: 48px; border-radius: 50%;
   object-fit: cover; object-position: top center;
   flex-shrink: 0;
   box-shadow: 0 2px 10px rgba(99,102,241,.35);
   border: 2px solid rgba(255,255,255,.4);
 }
-.jessica-avatar.large { width: 80px; height: 80px; }
-.jessica-avatar.loading-avatar {
+.megi-avatar.large { width: 80px; height: 80px; }
+.megi-avatar.loading-avatar {
   width: 120px; height: 120px;
   border-radius: 50%;
   object-fit: cover;
@@ -297,7 +297,7 @@ body {
 }
 
 /* ── Jessica photo panel ── */
-.jessica-panel {
+.megi-panel {
   position: relative;
   border-radius: 18px;
   overflow: hidden;
@@ -305,7 +305,7 @@ body {
   background: linear-gradient(160deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%);
 }
 
-.jessica-hero-img {
+.megi-hero-img {
   width: 100%;
   display: block;
   object-fit: cover;
@@ -313,21 +313,21 @@ body {
   max-height: 540px;
 }
 
-.jessica-panel-overlay {
+.megi-panel-overlay {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   background: linear-gradient(to top, rgba(15,12,60,.92) 0%, rgba(15,12,60,.5) 60%, transparent 100%);
   padding: 24px 20px 18px;
 }
 
-.jessica-panel-name {
+.megi-panel-name {
   font-size: 22px;
   font-weight: 800;
   color: white;
   letter-spacing: -.4px;
 }
 
-.jessica-panel-title {
+.megi-panel-title {
   font-size: 12px;
   color: rgba(196,181,253,.9);
   font-weight: 600;
@@ -377,8 +377,8 @@ body {
   max-width: 420px;
 }
 
-.jessica-name  { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
-.jessica-desc  { font-size: 12px; color: var(--gray); line-height: 1.65; }
+.megi-name  { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.megi-desc  { font-size: 12px; color: var(--gray); line-height: 1.65; }
 
 /* ─── Upload Zone ──────────────────────────────────────────────────────────── */
 .upload-zone {
@@ -562,7 +562,7 @@ body {
   pointer-events: none;
 }
 
-.jessica-tag { font-size: 9.5px; font-weight: 700; opacity: .48; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 3px; }
+.megi-tag { font-size: 9.5px; font-weight: 700; opacity: .48; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 3px; }
 .results-doc-type { font-size: 16px; font-weight: 900; letter-spacing: -.3px; margin-bottom: 7px; position: relative; z-index: 1; }
 .results-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; position: relative; z-index: 1; }
 .results-filename { font-size: 11px; opacity: .48; margin-top: 2px; position: relative; z-index: 1; }
@@ -736,7 +736,7 @@ td.amount { font-weight: 700; color: var(--green); }
   .app-header { padding: 0 14px; }
   .header-inner { height: 52px; gap: 8px; }
   .logo { gap: 10px; }
-  .logo-jessica { font-size: 22px; letter-spacing: .08em; }
+  .logo-megi { font-size: 22px; letter-spacing: .08em; }
   .logo-divider { height: 26px; }
   .logo-tagline { font-size: 10px; }
 
@@ -745,8 +745,8 @@ td.amount { font-weight: 700; color: var(--green); }
     grid-template-columns: 1fr;
     gap: 18px;
   }
-  .jessica-panel { max-width: 460px; margin: 0 auto; }
-  .jessica-hero-img { max-height: 360px; }
+  .megi-panel { max-width: 460px; margin: 0 auto; }
+  .megi-hero-img { max-height: 360px; }
   .landing-right { padding-top: 0; }
   .landing-title { font-size: 26px; letter-spacing: -.6px; }
   .landing-sub { font-size: 13px; max-width: 100%; }
@@ -810,7 +810,7 @@ td.amount { font-weight: 700; color: var(--green); }
   .batch-summary-group { font-size: 17px; }
 
   /* Ask Jessica */
-  .ask-jessica { padding: 18px 16px; border-radius: 12px; }
+  .ask-megi { padding: 18px 16px; border-radius: 12px; }
   .ask-messages { max-height: 60vh; }
   .ask-bubble { max-width: 88%; font-size: 13.5px; }
 
@@ -826,7 +826,7 @@ td.amount { font-weight: 700; color: var(--green); }
   /* Header — give the buttons priority over the tagline */
   .header-inner { height: 56px; }
   .logo-tagline { display: none; }
-  .logo-jessica { font-size: 20px; }
+  .logo-megi { font-size: 20px; }
   .logo-divider { display: none; }
   .btn { padding: 8px 12px; font-size: 12px; }
   .btn-sm { padding: 6px 10px; font-size: 11px; }
@@ -835,9 +835,9 @@ td.amount { font-weight: 700; color: var(--green); }
   .landing { padding: 4px 0 16px; }
   .landing-title { font-size: 22px; line-height: 1.15; }
   .landing-sub { font-size: 12.5px; line-height: 1.6; }
-  .jessica-hero-img { max-height: 280px; }
-  .jessica-panel-name { font-size: 18px; }
-  .jessica-panel-title { font-size: 10px; }
+  .megi-hero-img { max-height: 280px; }
+  .megi-panel-name { font-size: 18px; }
+  .megi-panel-title { font-size: 10px; }
 
   /* Upload zone — bigger tap area, larger text */
   .upload-zone { padding: 22px 14px; }
@@ -876,9 +876,9 @@ td.amount { font-weight: 700; color: var(--green); }
   td { padding: 7px 9px; }
 
   /* Ask Jessica */
-  .ask-jessica { padding: 16px 14px; margin-top: 18px; }
-  .ask-jessica-header { gap: 10px; margin-bottom: 14px; }
-  .ask-jessica-title { font-size: 14px; }
+  .ask-megi { padding: 16px 14px; margin-top: 18px; }
+  .ask-megi-header { gap: 10px; margin-bottom: 14px; }
+  .ask-megi-title { font-size: 14px; }
   .ask-suggestions { gap: 6px; margin-bottom: 14px; }
   .ask-suggestion-chip { font-size: 11.5px; padding: 6px 10px; }
   .ask-input { font-size: 14px; padding: 10px 12px; }
@@ -906,7 +906,7 @@ td.amount { font-weight: 700; color: var(--green); }
 /* Very small phones */
 @media (max-width: 380px) {
   .header-inner { gap: 6px; }
-  .logo-jessica { font-size: 18px; }
+  .logo-megi { font-size: 18px; }
   .btn { padding: 7px 10px; font-size: 11.5px; }
   .landing-title { font-size: 20px; }
   .results-doc-type { font-size: 14px; }
@@ -914,7 +914,7 @@ td.amount { font-weight: 700; color: var(--green); }
 }
 
 /* ─── Ask Jessica ──────────────────────────────────────────────────────────── */
-.ask-jessica {
+.ask-megi {
   background: #0f0e1a;
   border: 1px solid rgba(99, 102, 241, 0.25);
   border-radius: 16px;
@@ -922,21 +922,21 @@ td.amount { font-weight: 700; color: var(--green); }
   margin-top: 24px;
 }
 
-.ask-jessica-header {
+.ask-megi-header {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
 }
 
-.ask-jessica-title {
+.ask-megi-title {
   font-size: 15px;
   font-weight: 700;
   color: #a5b4fc;
   letter-spacing: 0.02em;
 }
 
-.ask-jessica-sub {
+.ask-megi-sub {
   font-size: 12px;
   color: #6b7280;
   margin-top: 2px;
@@ -1109,7 +1109,7 @@ td.amount { font-weight: 700; color: var(--green); }
 }
 
 /* ─── Ask Jessica ──────────────────────────────────────────────────────────── */
-.ask-jessica {
+.ask-megi {
   background: #0f0e1a;
   border: 1px solid rgba(99, 102, 241, 0.25);
   border-radius: 16px;
@@ -1117,21 +1117,21 @@ td.amount { font-weight: 700; color: var(--green); }
   margin-top: 24px;
 }
 
-.ask-jessica-header {
+.ask-megi-header {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
 }
 
-.ask-jessica-title {
+.ask-megi-title {
   font-size: 15px;
   font-weight: 700;
   color: #a5b4fc;
   letter-spacing: 0.02em;
 }
 
-.ask-jessica-sub {
+.ask-megi-sub {
   font-size: 12px;
   color: #6b7280;
   margin-top: 2px;
